@@ -1,7 +1,7 @@
 # exampleSite/config.yaml
-baseURL: https://ahmed-altakrouri.github.io/ # Replace with your domain
+baseURL: https://kushbookkk.github.io/ # Replace with your domain
 languageCode: en-us
-title: AHMED AL-TAKROURI
+title: KUSHBOO KUNHIKRISHNAN
 menu:
   main:
     - identifier: home
@@ -26,20 +26,20 @@ menu:
       weight: 5
 params:
   abbrDateFmt: "Jan 2"
-  author: "Ahmed Al-takrouri"
+  author: "Kushboo Kunhikrishnan"
   brandIconFile: "images/brandIcon.svg"
   dateFmt: "2006-01-02"
   customStylesheets: # Use to override theme styles, like logo size
       - "css/style.css"
   social:
     - name: GitHub
-      url: https://github.com/AHMED-ALTAKROURI
-    - name: Twitter
-      url: https://twitter.com/ahmedtakrouri
+      url: https://github.com/kushbookkk
+    # - name: Twitter
+    #  url: https://twitter.com/ahmedtakrouri
     #    - name: Reddit
     #      url: https://www.reddit.com/user/ian-s-mcb
     - name: Linkedin
-      url: https://www.linkedin.com/in/ahmed-altakrouri-7422b185/
+      url: https://www.linkedin.com/in/kushbookk/
   subtitle: "AI/ML Blog"
 
 
