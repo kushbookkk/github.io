@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Posts on AHMED AL-TAKROURI</title>
+    <link>https://ahmed-altakrouri.github.io/posts/</link>
+    <description>Recent content in Posts on AHMED AL-TAKROURI</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 04 Dec 2023 00:00:00 +0000</lastBuildDate><atom:link href="https://ahmed-altakrouri.github.io/posts/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Churn Forecasting Series: Large Scale End-to-End Churn Modeling</title>
+      <link>https://ahmed-altakrouri.github.io/posts/end-to-end-churn-prediction-model/</link>
+      <pubDate>Mon, 04 Dec 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://ahmed-altakrouri.github.io/posts/end-to-end-churn-prediction-model/</guid>
+      <description>import pandas as pd import seaborn as sns import matplotlib.pyplot as plt import warnings import numpy as np from scipy.io import arff # Disable warnings warnings.filterwarnings(&amp;#39;ignore&amp;#39;) data, meta = arff.loadarff(&amp;#39;large_churn_data&amp;#39;) data = pd.DataFrame(data) data.iloc[:, :8] year month user_account_id user_lifetime user_intake user_no_outgoing_activity_in_days user_account_balance_last user_spendings 0 2013.0 6.0 13.0 1000.0 0.0 1.0 0.05 0.00 1 2013.0 6.0 14.0 1000.0 0.0 25.0 28.31 3.45 2 2013.0 6.0 18.0 1005.0 0.0 8.0 15.62 1.</description>
+    </item>
+    
+    <item>
+      <title>Forecasting Switzerland&#39;s Inflation Rate</title>
+      <link>https://ahmed-altakrouri.github.io/posts/forecasting-switzerlands-inflation-rate/</link>
+      <pubDate>Sat, 11 Nov 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://ahmed-altakrouri.github.io/posts/forecasting-switzerlands-inflation-rate/</guid>
+      <description>Data Source: https://www.worldbank.org/en/research/brief/inflation-database
+Notebook Content: Reading and Preprocessing Data. Explanatory Data Analysis. Statistical Analysis. ARIMA Model SARIMA Model. Backtesting. import statsmodels.api as sm from statsmodels.tsa.seasonal import seasonal_decompose from statsmodels.graphics.tsaplots import plot_acf, plot_pacf from statsmodels.tsa.stattools import adfuller import warnings import matplotlib.dates as mdates from pmdarima import auto_arima from statsmodels.tsa.arima.model import ARIMA from statsmodels.tsa.statespace.sarimax import SARIMAX from sklearn.metrics import mean_squared_error import numpy as np import pandas as pd import seaborn as sns import matplotlib.</description>
+    </item>
+    
+    <item>
+      <title>NLP/NLU Series: Clustering Linkedin Profiles</title>
+      <link>https://ahmed-altakrouri.github.io/posts/clustering-linkedin-profiles/</link>
+      <pubDate>Sat, 22 Apr 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://ahmed-altakrouri.github.io/posts/clustering-linkedin-profiles/</guid>
+      <description>Overview: This notebook shows off how I built a simple model that leans heavily on the power of Sentence Transformers BERT to pull out lots of features. The model is pretty simple because it&amp;rsquo;s based on K-means, but there&amp;rsquo;s a ton of space to jazz it up and make it more complex. Basically, the algorithm I&amp;rsquo;ve got going here is a rock-solid starting point for the job of grouping similar LinkedIn profiles together.</description>
+    </item>
+    
+    <item>
+      <title>Net Profit Forecasting</title>
+      <link>https://ahmed-altakrouri.github.io/posts/net-profit-forecasting/</link>
+      <pubDate>Wed, 15 Feb 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://ahmed-altakrouri.github.io/posts/net-profit-forecasting/</guid>
+      <description>Overview: This notebook aimed is to demonstrate the solution for simple regression problem, predict net profit given a set of attributes, first I start with simple EDA understand the data numerical and categorical distributions. Then I fit simple statistical model followed by linear regression and more complex one. each model includes scoring metrics and explanations. Finally, I communicate final finding of prediction of the provided Out-of-sample test set and the including factors or attributes that decided the final predictions using shapley values.</description>
+    </item>
+    
+    <item>
+      <title>Fraud Detection from Statistical Analysis and ML to Actionable Insights</title>
+      <link>https://ahmed-altakrouri.github.io/posts/fraud-detection/</link>
+      <pubDate>Fri, 27 Jan 2023 00:00:00 +0000</pubDate>
+      
+      <guid>https://ahmed-altakrouri.github.io/posts/fraud-detection/</guid>
+      <description>Overview: In my approach to catching credit card fraud, I see it as a problem of sorting into two groups. But since the data we have is heavily skewed, it&amp;rsquo;s tough to draw a line that separates fraudulent and legit transactions. To deal with this, I follow a step-by-step plan. First, I look at how data variables tied to both fraudulent and legit transactions spread out to get a better understanding of the data.</description>
+    </item>
+    
+  </channel>
+</rss>

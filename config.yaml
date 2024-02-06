@@ -1,0 +1,86 @@
+# exampleSite/config.yaml
+baseURL: https://ahmed-altakrouri.github.io/ # Replace with your domain
+languageCode: en-us
+title: AHMED AL-TAKROURI
+menu:
+  main:
+    - identifier: home
+      name: Home
+      url: /
+      weight: 1
+    - identifier: about
+      name: About
+      url: /about/
+      weight: 2
+    - identifier: posts
+      name: Posts
+      url: /posts/
+      weight: 3
+    - identifier: categories
+      name: Categories
+      url: /categories/
+      weight: 4
+    - identifier: tags
+      name: Tags
+      url: /tags/
+      weight: 5
+params:
+  abbrDateFmt: "Jan 2"
+  author: "Ahmed Al-takrouri"
+  brandIconFile: "images/brandIcon.svg"
+  dateFmt: "2006-01-02"
+  customStylesheets: # Use to override theme styles, like logo size
+      - "css/style.css"
+  social:
+    - name: GitHub
+      url: https://github.com/AHMED-ALTAKROURI
+    - name: Twitter
+      url: https://twitter.com/ahmedtakrouri
+    #    - name: Reddit
+    #      url: https://www.reddit.com/user/ian-s-mcb
+    - name: Linkedin
+      url: https://www.linkedin.com/in/ahmed-altakrouri-7422b185/
+  subtitle: "AI/ML Blog"
+
+
+markup:
+  goldmark:
+    renderer:
+      unsafe: true
+
+justifyContent : true
+
+
+#markup:
+#  highlight:
+#    noClasses: false
+
+#markup:
+#  highlight:
+#    codeFences: true
+#    guessSyntax: true
+#    hl_Lines: ""
+#    lineNoStart: 1
+#    lineNos: true
+#    lineNumbersInTable: true
+#    tabWidth: 4
+#    noClasses: false
+
+#pygmentsUseClasses: false
+#pygmentsCodefences: true
+
+markup:
+  goldmark:
+    renderer:
+      unsafe: true
+  highlight:
+    codeFences: true
+    guessSyntax: false
+    hl_Lines: ""
+    lineNoStart: 1
+    lineNos: false
+    lineNumbersInTable: true
+    noClasses: true
+    tabWidth: 2
+    style: "friendly"
+#    style: "emacs"

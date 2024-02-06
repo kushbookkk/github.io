@@ -1,0 +1,98 @@
+html {
+  overflow-y: scroll
+}
+:root {
+  --bgcolor: white;
+  --fontcolor: #444;
+  --linkcolor: #00e;
+  --visitedcolor: #551a8b;
+  --precolor: #150101;
+  --prebgcolor: #150101;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+     /*--bgcolor: black;*/
+     --fontcolor: #2f2b2b;
+     --linkcolor: #5bf;
+     --linkcolor: green;
+      --visitedcolor: #ae5ee0;
+       --visitedcolor: #ae5ee0;
+     --precolor: #0e0101;
+     --prebgcolor: #fbfbfb;
+  }
+}
+body {
+  color: var(--fontcolor);
+  background: var(--bgcolor);
+}
+a {
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+a:link {
+  color: var(--linkcolor);
+}
+a:visited {
+ /* color: var(--visitedcolor); */
+  color: green;
+}
+a:active {
+  color: var(--visitedcolor);
+}
+h1,h2,h3 {
+  line-height: 1.2;
+}
+p > code {
+  color:#0e0101;
+  background: var(--prebgcolor);
+  padding: 2px;
+}
+pre {
+  color: #0e0101;
+  background: var(--prebgcolor);
+  padding: 24px;
+  overflow-x: auto;
+}
+b {
+   font-size: 1.25em;
+   color: blue;
+}
+
+article {
+  padding: 5px 0;
+}
+.center  {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+figcaption {
+  color: #888;
+  font: 12px/1.5 monospace;
+  text-align: center;
+}
+figure {
+  margin: auto;
+}
+.justify-text {
+  text-align: justify;
+}
+
+/* Adjust the width of the whole page */
+body {
+  max-width: 90%;  /* Change this to your preferred width */
+  margin: 0 auto;  /* Centers content */
+}
+
+/* Adjust the width of the code blocks */
+pre, code {
+  max-width: 100%;  /* Change this to your preferred width */
+}

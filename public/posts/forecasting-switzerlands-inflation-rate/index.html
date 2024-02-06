@@ -1,0 +1,2120 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta
+    name="description"
+    content=""
+  />
+  
+    
+      <title>Forecasting Switzerland&#39;s Inflation Rate | AHMED AL-TAKROURI</title>
+    
+  
+  <link rel="stylesheet" href="/css/reset.css"/>
+  <link rel="stylesheet" href="/css/font.css"/>
+  <link rel="stylesheet" href="/css/smigle.css"/>
+  
+    <link rel="stylesheet" href="/css/style.css"/>
+  
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="msapplication-TileColor" content="#da532c">
+  <meta name="theme-color" content="#ffffff">
+</head>
+
+  <body>
+    <header>
+  <div id="brand">
+    <a class="icon-link" href="https://ahmed-altakrouri.github.io/">
+      <img
+        class="icon"
+        src="/images/brandIcon.svg"
+      />
+    </a>
+    <div class="text">
+      <a href="https://ahmed-altakrouri.github.io/"><h1>AHMED AL-TAKROURI</h1></a>
+      <h3>AI/ML Blog</h3>
+    </div>
+  </div>
+  <nav>
+    
+      
+        
+        <a href="/"><b>Home</b></a>
+      
+         | 
+        <a href="/about/"><b>About</b></a>
+      
+         | 
+        <a href="/posts/"><b>Posts</b></a>
+      
+         | 
+        <a href="/categories/"><b>Categories</b></a>
+      
+         | 
+        <a href="/tags/"><b>Tags</b></a>
+      
+    
+  </nav>
+  <hr />
+</header>
+
+    <div id="content">
+      
+  <main>
+    <article>
+      <h1>Forecasting Switzerland&#39;s Inflation Rate</h1>
+      <div class="post-meta">
+  <strong>
+    <span>Posted on</span>
+    <time>2023-11-11</time>
+    
+    
+  </strong>
+  <span> • 3825 words</span>
+  <span> • 18 minute read</span>
+  
+  
+</div>
+
+      <div><p>Data Source: <a href="https://www.worldbank.org/en/research/brief/inflation-database">https://www.worldbank.org/en/research/brief/inflation-database</a></p>
+<h3 id="notebook-content">Notebook Content:</h3>
+<ol>
+<li>Reading and Preprocessing Data.</li>
+<li>Explanatory Data Analysis.</li>
+<li>Statistical Analysis.</li>
+<li>ARIMA Model</li>
+<li>SARIMA Model.</li>
+<li>Backtesting.</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">import</span> <span style="color:#0e84b5;font-weight:bold">statsmodels.api</span> <span style="color:#007020;font-weight:bold">as</span> <span style="color:#0e84b5;font-weight:bold">sm</span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">from</span> <span style="color:#0e84b5;font-weight:bold">statsmodels.tsa.seasonal</span> <span style="color:#007020;font-weight:bold">import</span> seasonal_decompose
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">from</span> <span style="color:#0e84b5;font-weight:bold">statsmodels.graphics.tsaplots</span> <span style="color:#007020;font-weight:bold">import</span> plot_acf, plot_pacf
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">from</span> <span style="color:#0e84b5;font-weight:bold">statsmodels.tsa.stattools</span> <span style="color:#007020;font-weight:bold">import</span> adfuller
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">import</span> <span style="color:#0e84b5;font-weight:bold">warnings</span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">import</span> <span style="color:#0e84b5;font-weight:bold">matplotlib.dates</span> <span style="color:#007020;font-weight:bold">as</span> <span style="color:#0e84b5;font-weight:bold">mdates</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">from</span> <span style="color:#0e84b5;font-weight:bold">pmdarima</span> <span style="color:#007020;font-weight:bold">import</span> auto_arima
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">from</span> <span style="color:#0e84b5;font-weight:bold">statsmodels.tsa.arima.model</span> <span style="color:#007020;font-weight:bold">import</span> ARIMA
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">from</span> <span style="color:#0e84b5;font-weight:bold">statsmodels.tsa.statespace.sarimax</span> <span style="color:#007020;font-weight:bold">import</span> SARIMAX
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">from</span> <span style="color:#0e84b5;font-weight:bold">sklearn.metrics</span> <span style="color:#007020;font-weight:bold">import</span> mean_squared_error
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">import</span> <span style="color:#0e84b5;font-weight:bold">numpy</span> <span style="color:#007020;font-weight:bold">as</span> <span style="color:#0e84b5;font-weight:bold">np</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">import</span> <span style="color:#0e84b5;font-weight:bold">pandas</span> <span style="color:#007020;font-weight:bold">as</span> <span style="color:#0e84b5;font-weight:bold">pd</span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">import</span> <span style="color:#0e84b5;font-weight:bold">seaborn</span> <span style="color:#007020;font-weight:bold">as</span> <span style="color:#0e84b5;font-weight:bold">sns</span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">import</span> <span style="color:#0e84b5;font-weight:bold">matplotlib.pyplot</span> <span style="color:#007020;font-weight:bold">as</span> <span style="color:#0e84b5;font-weight:bold">plt</span>
+</span></span></code></pre></div><h2 id="helper-functions">Helper Functions:</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">def</span> <span style="color:#06287e">melt_dataframe_consumer_price_index</span>(inflation_data, country, list_dates):
+</span></span><span style="display:flex;"><span>    inflation_data <span style="color:#666">=</span> inflation_data[inflation_data[<span style="color:#4070a0">&#34;Country&#34;</span>] <span style="color:#666">==</span> country]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    df_melted <span style="color:#666">=</span> pd<span style="color:#666">.</span>melt(
+</span></span><span style="display:flex;"><span>        inflation_data,
+</span></span><span style="display:flex;"><span>        id_vars<span style="color:#666">=</span>[<span style="color:#4070a0">&#39;Country Code&#39;</span>,
+</span></span><span style="display:flex;"><span>                 <span style="color:#4070a0">&#39;IMF Country Code&#39;</span>,
+</span></span><span style="display:flex;"><span>                 <span style="color:#4070a0">&#39;Country&#39;</span>,
+</span></span><span style="display:flex;"><span>                 <span style="color:#4070a0">&#39;Indicator Type&#39;</span>,
+</span></span><span style="display:flex;"><span>                 <span style="color:#4070a0">&#39;Series Name&#39;</span>],
+</span></span><span style="display:flex;"><span>        value_vars<span style="color:#666">=</span>[year <span style="color:#007020;font-weight:bold">for</span> year <span style="color:#007020;font-weight:bold">in</span> list_dates],
+</span></span><span style="display:flex;"><span>        var_name<span style="color:#666">=</span><span style="color:#4070a0">&#39;year&#39;</span>,
+</span></span><span style="display:flex;"><span>        value_name<span style="color:#666">=</span><span style="color:#4070a0">&#39;value&#39;</span>
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>    df_melted<span style="color:#666">.</span>drop(columns<span style="color:#666">=</span>[<span style="color:#4070a0">&#34;Country Code&#34;</span>, <span style="color:#4070a0">&#34;IMF Country Code&#34;</span>, <span style="color:#4070a0">&#34;Country&#34;</span>, <span style="color:#4070a0">&#34;Indicator Type&#34;</span>, <span style="color:#4070a0">&#34;Series Name&#34;</span>], axis<span style="color:#666">=</span><span style="color:#40a070">1</span>,
+</span></span><span style="display:flex;"><span>                   inplace<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">return</span> df_melted
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">def</span> <span style="color:#06287e">melt_dataframe_inflation_rate</span>(inflation_data, country):
+</span></span><span style="display:flex;"><span>    inflation_data <span style="color:#666">=</span> inflation_data[inflation_data[<span style="color:#4070a0">&#34;Country&#34;</span>] <span style="color:#666">==</span> country]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    df_melted <span style="color:#666">=</span> pd<span style="color:#666">.</span>melt(
+</span></span><span style="display:flex;"><span>        inflation_data,
+</span></span><span style="display:flex;"><span>        id_vars<span style="color:#666">=</span>[<span style="color:#4070a0">&#39;Country Code&#39;</span>,
+</span></span><span style="display:flex;"><span>                 <span style="color:#4070a0">&#39;IMF Country Code&#39;</span>,
+</span></span><span style="display:flex;"><span>                 <span style="color:#4070a0">&#39;Country&#39;</span>,
+</span></span><span style="display:flex;"><span>                 <span style="color:#4070a0">&#39;Indicator Type&#39;</span>,
+</span></span><span style="display:flex;"><span>                 <span style="color:#4070a0">&#39;Series Name&#39;</span>],
+</span></span><span style="display:flex;"><span>        value_vars<span style="color:#666">=</span>[year <span style="color:#007020;font-weight:bold">for</span> year <span style="color:#007020;font-weight:bold">in</span> <span style="color:#007020">range</span>(<span style="color:#40a070">1970</span>, <span style="color:#40a070">2023</span>)],
+</span></span><span style="display:flex;"><span>        var_name<span style="color:#666">=</span><span style="color:#4070a0">&#39;year&#39;</span>,
+</span></span><span style="display:flex;"><span>        value_name<span style="color:#666">=</span><span style="color:#4070a0">&#39;value&#39;</span>
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    df_melted<span style="color:#666">.</span>drop(columns<span style="color:#666">=</span>[<span style="color:#4070a0">&#34;Country Code&#34;</span>, <span style="color:#4070a0">&#34;IMF Country Code&#34;</span>, <span style="color:#4070a0">&#34;Country&#34;</span>, <span style="color:#4070a0">&#34;Indicator Type&#34;</span>, <span style="color:#4070a0">&#34;Series Name&#34;</span>], axis<span style="color:#666">=</span><span style="color:#40a070">1</span>,
+</span></span><span style="display:flex;"><span>                   inplace<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">return</span> df_melted
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">def</span> <span style="color:#06287e">get_country_data</span>(inflation_data, country, list_dates):
+</span></span><span style="display:flex;"><span>    country_sample <span style="color:#666">=</span> melt_dataframe_consumer_price_index(inflation_data, country, list_dates)
+</span></span><span style="display:flex;"><span>    country_sample<span style="color:#666">.</span>rename(columns<span style="color:#666">=</span>{<span style="color:#4070a0">&#34;year&#34;</span>: <span style="color:#4070a0">&#34;YearMonth&#34;</span>, <span style="color:#4070a0">&#34;value&#34;</span>: <span style="color:#4070a0">&#34;HCPI&#34;</span>}, inplace<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>    country_sample[<span style="color:#4070a0">&#39;YearMonth&#39;</span>] <span style="color:#666">=</span> country_sample[<span style="color:#4070a0">&#39;YearMonth&#39;</span>]<span style="color:#666">.</span>astype(<span style="color:#007020">str</span>)
+</span></span><span style="display:flex;"><span>    country_sample[<span style="color:#4070a0">&#39;YearMonth&#39;</span>] <span style="color:#666">=</span> country_sample[<span style="color:#4070a0">&#39;YearMonth&#39;</span>]<span style="color:#666">.</span>str[:<span style="color:#40a070">4</span>] <span style="color:#666">+</span> <span style="color:#4070a0">&#39;-&#39;</span> <span style="color:#666">+</span> country_sample[<span style="color:#4070a0">&#39;YearMonth&#39;</span>]<span style="color:#666">.</span>str[<span style="color:#40a070">4</span>:]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">return</span> country_sample
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">def</span> <span style="color:#06287e">get_country_data_annualy</span>(inflation_data, country, list_dates):
+</span></span><span style="display:flex;"><span>    country_sample <span style="color:#666">=</span> melt_dataframe_consumer_price_index(inflation_data, country, list_dates)
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">return</span> country_sample
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">def</span> <span style="color:#06287e">get_monthly_inflation_from_CPI</span>(country_sample):
+</span></span><span style="display:flex;"><span>    country_sample[<span style="color:#4070a0">&#39;Monthly Inflation Rate&#39;</span>] <span style="color:#666">=</span> ((country_sample[<span style="color:#4070a0">&#39;HCPI&#39;</span>] <span style="color:#666">-</span> country_sample[<span style="color:#4070a0">&#39;HCPI&#39;</span>]<span style="color:#666">.</span>shift(<span style="color:#40a070">1</span>)) <span style="color:#666">/</span>
+</span></span><span style="display:flex;"><span>                                                country_sample[<span style="color:#4070a0">&#39;HCPI&#39;</span>]<span style="color:#666">.</span>shift(<span style="color:#40a070">1</span>)) <span style="color:#666">*</span> <span style="color:#40a070">100</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">return</span> country_sample
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">def</span> <span style="color:#06287e">get_yearly_inflation_from_monthly</span>(country_sample):
+</span></span><span style="display:flex;"><span>    df_new_format <span style="color:#666">=</span> pd<span style="color:#666">.</span>DataFrame(country_sample)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    df_new_format[<span style="color:#4070a0">&#39;YearMonth&#39;</span>] <span style="color:#666">=</span> pd<span style="color:#666">.</span>to_datetime(df_new_format[<span style="color:#4070a0">&#39;YearMonth&#39;</span>])
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    yearly_avg_cpi_datetime <span style="color:#666">=</span> df_new_format<span style="color:#666">.</span>groupby(df_new_format[<span style="color:#4070a0">&#39;YearMonth&#39;</span>]<span style="color:#666">.</span>dt<span style="color:#666">.</span>year)<span style="color:#666">.</span>mean()[<span style="color:#4070a0">&#39;HCPI&#39;</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#60a0b0;font-style:italic"># Calculate the yearly inflation rate using the yearly average CPI</span>
+</span></span><span style="display:flex;"><span>    yearly_avg_inflation_rate_datetime <span style="color:#666">=</span> ((yearly_avg_cpi_datetime <span style="color:#666">-</span> yearly_avg_cpi_datetime<span style="color:#666">.</span>shift(
+</span></span><span style="display:flex;"><span>        <span style="color:#40a070">1</span>)) <span style="color:#666">/</span> yearly_avg_cpi_datetime<span style="color:#666">.</span>shift(<span style="color:#40a070">1</span>)) <span style="color:#666">*</span> <span style="color:#40a070">100</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    yearly_avg_inflation_datetime <span style="color:#666">=</span> yearly_avg_inflation_rate_datetime<span style="color:#666">.</span>reset_index()
+</span></span><span style="display:flex;"><span>    yearly_avg_inflation_datetime<span style="color:#666">.</span>columns <span style="color:#666">=</span> [<span style="color:#4070a0">&#39;Year&#39;</span>, <span style="color:#4070a0">&#39;Yearly Inflation Rate (Avg)&#39;</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">return</span> yearly_avg_inflation_datetime
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">def</span> <span style="color:#06287e">adf_test</span>(series):
+</span></span><span style="display:flex;"><span>    result <span style="color:#666">=</span> adfuller(series, regression<span style="color:#666">=</span><span style="color:#4070a0">&#39;c&#39;</span>, autolag<span style="color:#666">=</span><span style="color:#4070a0">&#39;AIC&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#007020">print</span>(<span style="color:#4070a0">&#39;======= Augmented Dickey-Fuller Test Results =======</span><span style="color:#4070a0;font-weight:bold">\n</span><span style="color:#4070a0">&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#007020">print</span>(<span style="color:#4070a0">&#39;1. ADF Test Statistic: </span><span style="color:#70a0d0">{:.6f}</span><span style="color:#4070a0">&#39;</span><span style="color:#666">.</span>format(result[<span style="color:#40a070">0</span>]))
+</span></span><span style="display:flex;"><span>    <span style="color:#007020">print</span>(<span style="color:#4070a0">&#39;2. P-value: </span><span style="color:#70a0d0">{:.6f}</span><span style="color:#4070a0">&#39;</span><span style="color:#666">.</span>format(result[<span style="color:#40a070">1</span>]))
+</span></span><span style="display:flex;"><span>    <span style="color:#007020">print</span>(<span style="color:#4070a0">&#39;3. Used Lags: </span><span style="color:#70a0d0">{}</span><span style="color:#4070a0">&#39;</span><span style="color:#666">.</span>format(result[<span style="color:#40a070">2</span>]))
+</span></span><span style="display:flex;"><span>    <span style="color:#007020">print</span>(<span style="color:#4070a0">&#39;4. Used Observations: </span><span style="color:#70a0d0">{}</span><span style="color:#4070a0">&#39;</span><span style="color:#666">.</span>format(result[<span style="color:#40a070">3</span>]))
+</span></span><span style="display:flex;"><span>    <span style="color:#007020">print</span>(<span style="color:#4070a0">&#39;5. Critical Values:&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">for</span> key, value <span style="color:#007020;font-weight:bold">in</span> result[<span style="color:#40a070">4</span>]<span style="color:#666">.</span>items():
+</span></span><span style="display:flex;"><span>        <span style="color:#007020">print</span>(<span style="color:#4070a0">&#39;</span><span style="color:#4070a0;font-weight:bold">\t</span><span style="color:#70a0d0">{}</span><span style="color:#4070a0">: </span><span style="color:#70a0d0">{:.6f}</span><span style="color:#4070a0">&#39;</span><span style="color:#666">.</span>format(key, value))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    critical_value <span style="color:#666">=</span> result[<span style="color:#40a070">4</span>][<span style="color:#4070a0">&#39;5%&#39;</span>]
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">if</span> (result[<span style="color:#40a070">1</span>] <span style="color:#666">&lt;=</span> <span style="color:#40a070">0.05</span>) <span style="color:#007020;font-weight:bold">and</span> (result[<span style="color:#40a070">0</span>] <span style="color:#666">&lt;</span> critical_value):
+</span></span><span style="display:flex;"><span>        <span style="color:#007020">print</span>(<span style="color:#4070a0">&#39;</span><span style="color:#4070a0;font-weight:bold">\n</span><span style="color:#4070a0">Strong evidence against the null hypothesis (H0), reject the null hypothesis.</span><span style="color:#4070a0;font-weight:bold">\
+</span></span></span><span style="display:flex;"><span><span style="color:#4070a0;font-weight:bold"></span><span style="color:#4070a0">        Data has no unit root and is stationary.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">else</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#007020">print</span>(<span style="color:#4070a0">&#39;</span><span style="color:#4070a0;font-weight:bold">\n</span><span style="color:#4070a0">Weak evidence against null hypothesis, time series has a unit root, indicating it is non-stationary.&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">def</span> <span style="color:#06287e">series_transformation</span>(series):
+</span></span><span style="display:flex;"><span>    fig <span style="color:#666">=</span> plt<span style="color:#666">.</span>figure(figsize<span style="color:#666">=</span>(<span style="color:#40a070">16</span>, <span style="color:#40a070">4</span>))
+</span></span><span style="display:flex;"><span>    ax1 <span style="color:#666">=</span> fig<span style="color:#666">.</span>add_subplot(<span style="color:#40a070">1</span>, <span style="color:#40a070">3</span>, <span style="color:#40a070">1</span>)
+</span></span><span style="display:flex;"><span>    ax1<span style="color:#666">.</span>set_title(<span style="color:#4070a0">&#39;Transformed Series&#39;</span>)
+</span></span><span style="display:flex;"><span>    ax1<span style="color:#666">.</span>plot(series)
+</span></span><span style="display:flex;"><span>    ax1<span style="color:#666">.</span>plot(series<span style="color:#666">.</span>rolling(window<span style="color:#666">=</span><span style="color:#40a070">12</span>)<span style="color:#666">.</span>mean(), color<span style="color:#666">=</span><span style="color:#4070a0">&#39;crimson&#39;</span>)
+</span></span><span style="display:flex;"><span>    ax1<span style="color:#666">.</span>plot(series<span style="color:#666">.</span>rolling(window<span style="color:#666">=</span><span style="color:#40a070">12</span>)<span style="color:#666">.</span>std(), color<span style="color:#666">=</span><span style="color:#4070a0">&#39;black&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    ax2 <span style="color:#666">=</span> fig<span style="color:#666">.</span>add_subplot(<span style="color:#40a070">1</span>, <span style="color:#40a070">3</span>, <span style="color:#40a070">2</span>)
+</span></span><span style="display:flex;"><span>    plot_acf(series<span style="color:#666">.</span>dropna(), ax<span style="color:#666">=</span>ax2, lags<span style="color:#666">=</span><span style="color:#40a070">50</span>, title<span style="color:#666">=</span><span style="color:#4070a0">&#39;Autocorrelation&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#60a0b0;font-style:italic"># plot 95% confidence intervals</span>
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>axhline(y<span style="color:#666">=-</span><span style="color:#40a070">1.96</span> <span style="color:#666">/</span> np<span style="color:#666">.</span>sqrt(<span style="color:#007020">len</span>(series)), linestyle<span style="color:#666">=</span><span style="color:#4070a0">&#39;--&#39;</span>, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;gray&#39;</span>)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>axhline(y<span style="color:#666">=</span><span style="color:#40a070">1.96</span> <span style="color:#666">/</span> np<span style="color:#666">.</span>sqrt(<span style="color:#007020">len</span>(series)), linestyle<span style="color:#666">=</span><span style="color:#4070a0">&#39;--&#39;</span>, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;gray&#39;</span>)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>xlabel(<span style="color:#4070a0">&#39;lags&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    ax3 <span style="color:#666">=</span> fig<span style="color:#666">.</span>add_subplot(<span style="color:#40a070">1</span>, <span style="color:#40a070">3</span>, <span style="color:#40a070">3</span>)
+</span></span><span style="display:flex;"><span>    plot_pacf(series<span style="color:#666">.</span>dropna(), ax<span style="color:#666">=</span>ax3, lags<span style="color:#666">=</span><span style="color:#40a070">50</span>, title<span style="color:#666">=</span><span style="color:#4070a0">&#39;Partial Autocorrelation&#39;</span>)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>axhline(y<span style="color:#666">=-</span><span style="color:#40a070">1.96</span> <span style="color:#666">/</span> np<span style="color:#666">.</span>sqrt(<span style="color:#007020">len</span>(series)), linestyle<span style="color:#666">=</span><span style="color:#4070a0">&#39;--&#39;</span>, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;gray&#39;</span>)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>axhline(y<span style="color:#666">=</span><span style="color:#40a070">1.96</span> <span style="color:#666">/</span> np<span style="color:#666">.</span>sqrt(<span style="color:#007020">len</span>(series)), linestyle<span style="color:#666">=</span><span style="color:#4070a0">&#39;--&#39;</span>, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;gray&#39;</span>)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>xlabel(<span style="color:#4070a0">&#39;lags&#39;</span>)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>show()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#60a0b0;font-style:italic"># ADF test</span>
+</span></span><span style="display:flex;"><span>    result <span style="color:#666">=</span> adfuller(series<span style="color:#666">.</span>dropna(), regression<span style="color:#666">=</span><span style="color:#4070a0">&#39;c&#39;</span>, autolag<span style="color:#666">=</span><span style="color:#4070a0">&#39;AIC&#39;</span>)
+</span></span><span style="display:flex;"><span>    critical_value <span style="color:#666">=</span> result[<span style="color:#40a070">4</span>][<span style="color:#4070a0">&#39;5%&#39;</span>]
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">if</span> (result[<span style="color:#40a070">1</span>] <span style="color:#666">&lt;=</span> <span style="color:#40a070">0.05</span>) <span style="color:#007020;font-weight:bold">and</span> (result[<span style="color:#40a070">0</span>] <span style="color:#666">&lt;</span> critical_value):
+</span></span><span style="display:flex;"><span>        <span style="color:#007020">print</span>(<span style="color:#4070a0">&#39;P-value = </span><span style="color:#70a0d0">{:.6f}</span><span style="color:#4070a0">, the series is likely stationary.&#39;</span><span style="color:#666">.</span>format(result[<span style="color:#40a070">1</span>]))
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">else</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#007020">print</span>(<span style="color:#4070a0">&#39;P-value = </span><span style="color:#70a0d0">{:.6f}</span><span style="color:#4070a0">, the series is likely non-stationary.&#39;</span><span style="color:#666">.</span>format(result[<span style="color:#40a070">1</span>]))
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">return</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">def</span> <span style="color:#06287e">find_best_arima_params</span>(series, max_p<span style="color:#666">=</span><span style="color:#40a070">5</span>, max_d<span style="color:#666">=</span><span style="color:#40a070">5</span>, max_q<span style="color:#666">=</span><span style="color:#40a070">5</span>, verbose<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>):
+</span></span><span style="display:flex;"><span>    warnings<span style="color:#666">.</span>filterwarnings(<span style="color:#4070a0">&#34;ignore&#34;</span>)  <span style="color:#60a0b0;font-style:italic"># Ignore warning messages for clarity</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    best_aic <span style="color:#666">=</span> <span style="color:#007020">float</span>(<span style="color:#4070a0">&#39;inf&#39;</span>)
+</span></span><span style="display:flex;"><span>    best_params <span style="color:#666">=</span> <span style="color:#007020;font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">for</span> p <span style="color:#007020;font-weight:bold">in</span> <span style="color:#007020">range</span>(max_p <span style="color:#666">+</span> <span style="color:#40a070">1</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#007020;font-weight:bold">for</span> d <span style="color:#007020;font-weight:bold">in</span> <span style="color:#007020">range</span>(max_d <span style="color:#666">+</span> <span style="color:#40a070">1</span>):
+</span></span><span style="display:flex;"><span>            <span style="color:#007020;font-weight:bold">for</span> q <span style="color:#007020;font-weight:bold">in</span> <span style="color:#007020">range</span>(max_q <span style="color:#666">+</span> <span style="color:#40a070">1</span>):
+</span></span><span style="display:flex;"><span>                <span style="color:#007020;font-weight:bold">try</span>:
+</span></span><span style="display:flex;"><span>                    model <span style="color:#666">=</span> ARIMA(series, order<span style="color:#666">=</span>(p, d, q))
+</span></span><span style="display:flex;"><span>                    results <span style="color:#666">=</span> model<span style="color:#666">.</span>fit()
+</span></span><span style="display:flex;"><span>                    <span style="color:#007020;font-weight:bold">if</span> results<span style="color:#666">.</span>aic <span style="color:#666">&lt;</span> best_aic:
+</span></span><span style="display:flex;"><span>                        best_aic <span style="color:#666">=</span> results<span style="color:#666">.</span>aic
+</span></span><span style="display:flex;"><span>                        best_params <span style="color:#666">=</span> (p, d, q)
+</span></span><span style="display:flex;"><span>                <span style="color:#007020;font-weight:bold">except</span> <span style="color:#007020">Exception</span> <span style="color:#007020;font-weight:bold">as</span> e:
+</span></span><span style="display:flex;"><span>                    <span style="color:#007020;font-weight:bold">if</span> verbose:
+</span></span><span style="display:flex;"><span>                        <span style="color:#007020">print</span>(<span style="color:#4070a0">f</span><span style="color:#4070a0">&#34;ARIMA(</span><span style="color:#70a0d0">{</span>p<span style="color:#70a0d0">}</span><span style="color:#4070a0">,</span><span style="color:#70a0d0">{</span>d<span style="color:#70a0d0">}</span><span style="color:#4070a0">,</span><span style="color:#70a0d0">{</span>q<span style="color:#70a0d0">}</span><span style="color:#4070a0">) - AIC: N/A - Error: </span><span style="color:#70a0d0">{</span><span style="color:#007020">str</span>(e)<span style="color:#70a0d0">}</span><span style="color:#4070a0">&#34;</span>)
+</span></span><span style="display:flex;"><span>                    <span style="color:#007020;font-weight:bold">continue</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">if</span> verbose:
+</span></span><span style="display:flex;"><span>        <span style="color:#007020">print</span>(<span style="color:#4070a0">f</span><span style="color:#4070a0">&#34;Best ARIMA</span><span style="color:#70a0d0">{</span>best_params<span style="color:#70a0d0">}</span><span style="color:#4070a0"> model - AIC: </span><span style="color:#70a0d0">{</span>best_aic<span style="color:#70a0d0">}</span><span style="color:#4070a0">&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">return</span> best_params
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">def</span> <span style="color:#06287e">find_best_arima_params_metric</span>(series, max_p<span style="color:#666">=</span><span style="color:#40a070">5</span>, max_d<span style="color:#666">=</span><span style="color:#40a070">5</span>, max_q<span style="color:#666">=</span><span style="color:#40a070">5</span>, verbose<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>):
+</span></span><span style="display:flex;"><span>    warnings<span style="color:#666">.</span>filterwarnings(<span style="color:#4070a0">&#34;ignore&#34;</span>)  <span style="color:#60a0b0;font-style:italic"># Ignore warning messages for clarity</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    best_mse <span style="color:#666">=</span> <span style="color:#007020">float</span>(<span style="color:#4070a0">&#39;inf&#39;</span>)
+</span></span><span style="display:flex;"><span>    best_params <span style="color:#666">=</span> <span style="color:#007020;font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">for</span> p <span style="color:#007020;font-weight:bold">in</span> <span style="color:#007020">range</span>(max_p <span style="color:#666">+</span> <span style="color:#40a070">1</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#007020;font-weight:bold">for</span> d <span style="color:#007020;font-weight:bold">in</span> <span style="color:#007020">range</span>(max_d <span style="color:#666">+</span> <span style="color:#40a070">1</span>):
+</span></span><span style="display:flex;"><span>            <span style="color:#007020;font-weight:bold">for</span> q <span style="color:#007020;font-weight:bold">in</span> <span style="color:#007020">range</span>(max_q <span style="color:#666">+</span> <span style="color:#40a070">1</span>):
+</span></span><span style="display:flex;"><span>                <span style="color:#007020;font-weight:bold">try</span>:
+</span></span><span style="display:flex;"><span>                    model <span style="color:#666">=</span> ARIMA(series, order<span style="color:#666">=</span>(p, d, q))
+</span></span><span style="display:flex;"><span>                    results <span style="color:#666">=</span> model<span style="color:#666">.</span>fit()
+</span></span><span style="display:flex;"><span>                    predicted <span style="color:#666">=</span> results<span style="color:#666">.</span>predict()
+</span></span><span style="display:flex;"><span>                    mse <span style="color:#666">=</span> ((series[d:] <span style="color:#666">-</span> predicted) <span style="color:#666">**</span> <span style="color:#40a070">2</span>)<span style="color:#666">.</span>mean()  <span style="color:#60a0b0;font-style:italic"># Calculating MSE for in-sample predictions</span>
+</span></span><span style="display:flex;"><span>                    <span style="color:#007020;font-weight:bold">if</span> mse <span style="color:#666">&lt;</span> best_mse:
+</span></span><span style="display:flex;"><span>                        best_mse <span style="color:#666">=</span> mse
+</span></span><span style="display:flex;"><span>                        best_params <span style="color:#666">=</span> (p, d, q)
+</span></span><span style="display:flex;"><span>                <span style="color:#007020;font-weight:bold">except</span> <span style="color:#007020">Exception</span> <span style="color:#007020;font-weight:bold">as</span> e:
+</span></span><span style="display:flex;"><span>                    <span style="color:#007020;font-weight:bold">if</span> verbose:
+</span></span><span style="display:flex;"><span>                        <span style="color:#007020">print</span>(<span style="color:#4070a0">f</span><span style="color:#4070a0">&#34;ARIMA(</span><span style="color:#70a0d0">{</span>p<span style="color:#70a0d0">}</span><span style="color:#4070a0">,</span><span style="color:#70a0d0">{</span>d<span style="color:#70a0d0">}</span><span style="color:#4070a0">,</span><span style="color:#70a0d0">{</span>q<span style="color:#70a0d0">}</span><span style="color:#4070a0">) - MSE: N/A - Error: </span><span style="color:#70a0d0">{</span><span style="color:#007020">str</span>(e)<span style="color:#70a0d0">}</span><span style="color:#4070a0">&#34;</span>)
+</span></span><span style="display:flex;"><span>                    <span style="color:#007020;font-weight:bold">continue</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">if</span> verbose:
+</span></span><span style="display:flex;"><span>        <span style="color:#007020">print</span>(<span style="color:#4070a0">f</span><span style="color:#4070a0">&#34;Best ARIMA</span><span style="color:#70a0d0">{</span>best_params<span style="color:#70a0d0">}</span><span style="color:#4070a0"> model - MSE: </span><span style="color:#70a0d0">{</span>best_mse<span style="color:#70a0d0">}</span><span style="color:#4070a0">&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">return</span> best_params
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">def</span> <span style="color:#06287e">visualize_cpi</span>(data):
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>figure(figsize<span style="color:#666">=</span>(<span style="color:#40a070">20</span>, <span style="color:#40a070">6</span>))
+</span></span><span style="display:flex;"><span>    sns<span style="color:#666">.</span>lineplot(x<span style="color:#666">=</span><span style="color:#4070a0">&#39;YearMonth&#39;</span>, y<span style="color:#666">=</span><span style="color:#4070a0">&#39;HCPI&#39;</span>, data<span style="color:#666">=</span>data)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>title(<span style="color:#4070a0">&#39;Headline Consumer Price Index over Time&#39;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">20</span>)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>xlabel(<span style="color:#4070a0">&#39;YearMonth&#39;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">15</span>)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>ylabel(<span style="color:#4070a0">&#39;Headline CPI&#39;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">15</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    num_ticks <span style="color:#666">=</span> <span style="color:#40a070">40</span>
+</span></span><span style="display:flex;"><span>    ticks <span style="color:#666">=</span> data[<span style="color:#4070a0">&#39;YearMonth&#39;</span>]<span style="color:#666">.</span>unique()
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>xticks(ticks[::<span style="color:#007020">len</span>(ticks) <span style="color:#666">//</span> num_ticks], rotation<span style="color:#666">=</span><span style="color:#40a070">45</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">13</span>)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>yticks(fontsize<span style="color:#666">=</span><span style="color:#40a070">13</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>tight_layout()
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>show()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">def</span> <span style="color:#06287e">format_year</span>(year_float):
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">if</span> year_float<span style="color:#666">.</span>is_integer():
+</span></span><span style="display:flex;"><span>        <span style="color:#007020;font-weight:bold">return</span> <span style="color:#007020">str</span>(<span style="color:#007020">int</span>(year_float))
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">else</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#007020;font-weight:bold">return</span> <span style="color:#007020">str</span>(year_float)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">def</span> <span style="color:#06287e">custom_round</span>(val):
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">if</span> val <span style="color:#666">==</span> <span style="color:#007020">int</span>(val):
+</span></span><span style="display:flex;"><span>        <span style="color:#007020;font-weight:bold">return</span> <span style="color:#007020">int</span>(val)
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">else</span>:
+</span></span><span style="display:flex;"><span>        <span style="color:#007020;font-weight:bold">return</span> <span style="color:#007020">round</span>(val, <span style="color:#40a070">1</span>)
+</span></span></code></pre></div><h2 id="reading-and-pre-processing-data">Reading and Pre-processing Data:</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>data_path <span style="color:#666">=</span> <span style="color:#4070a0">&#34;data/Inflation-data.xlsx&#34;</span>
+</span></span><span style="display:flex;"><span>inflation_excel_file <span style="color:#666">=</span> pd<span style="color:#666">.</span>ExcelFile(data_path)
+</span></span><span style="display:flex;"><span>inflation_excel_file<span style="color:#666">.</span>sheet_names
+</span></span></code></pre></div><pre><code>['Intro',
+ 'top',
+ 'hcpi_m',
+ 'hcpi_q',
+ 'hcpi_a',
+ 'ecpi_m',
+ 'ecpi_q',
+ 'ecpi_a',
+ 'fcpi_m',
+ 'fcpi_q',
+ 'fcpi_a',
+ 'ccpi_m',
+ 'ccpi_q',
+ 'ccpi_a',
+ 'ppi_m',
+ 'ppi_q',
+ 'ppi_a',
+ 'def_q',
+ 'def_a',
+ 'ccpi_m_e',
+ 'ccpi_q_e',
+ 'ccpi_a_e',
+ 'hcpi_q_t',
+ 'hcpi_q_c',
+ 'Aggregate']
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>overall_inflation <span style="color:#666">=</span> pd<span style="color:#666">.</span>read_excel(data_path,sheet_name<span style="color:#666">=</span><span style="color:#4070a0">&#34;top&#34;</span>)
+</span></span><span style="display:flex;"><span>overall_inflation<span style="color:#666">.</span>describe()
+</span></span></code></pre></div><div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+<pre><code>.dataframe tbody tr th {
+    vertical-align: top;
+}
+
+.dataframe thead th {
+    text-align: right;
+}
+</code></pre>
+<p></style></p>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Unnamed: 0</th>
+      <th>Unnamed: 1</th>
+      <th>Unnamed: 2</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>count</th>
+      <td>0.0</td>
+      <td>0.0</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>mean</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>std</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>min</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>25%</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>50%</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>75%</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>max</th>
+      <td>NaN</td>
+      <td>NaN</td>
+      <td>NaN</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>inflation_data <span style="color:#666">=</span> pd<span style="color:#666">.</span>read_excel(data_path,sheet_name<span style="color:#666">=</span><span style="color:#4070a0">&#34;hcpi_m&#34;</span>)
+</span></span><span style="display:flex;"><span>inflation_data<span style="color:#666">.</span>info()
+</span></span></code></pre></div><pre><code>&lt;class 'pandas.core.frame.DataFrame'&gt;
+RangeIndex: 188 entries, 0 to 187
+Columns: 648 entries, Country Code to Note
+dtypes: float64(636), object(12)
+memory usage: 951.9+ KB
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>data_columns <span style="color:#666">=</span> inflation_data<span style="color:#666">.</span>columns<span style="color:#666">.</span>tolist()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>to_remove <span style="color:#666">=</span> [<span style="color:#4070a0">&#39;Country Code&#39;</span>,
+</span></span><span style="display:flex;"><span>             <span style="color:#4070a0">&#39;IMF Country Code&#39;</span>,
+</span></span><span style="display:flex;"><span>             <span style="color:#4070a0">&#39;Country&#39;</span>,
+</span></span><span style="display:flex;"><span>             <span style="color:#4070a0">&#39;Indicator Type&#39;</span>,
+</span></span><span style="display:flex;"><span>             <span style="color:#4070a0">&#39;Series Name&#39;</span>,
+</span></span><span style="display:flex;"><span>             <span style="color:#4070a0">&#39;Unnamed: 644&#39;</span>,
+</span></span><span style="display:flex;"><span>             <span style="color:#4070a0">&#39;Data source&#39;</span>,
+</span></span><span style="display:flex;"><span>             <span style="color:#4070a0">&#39;Base date&#39;</span>,
+</span></span><span style="display:flex;"><span>             <span style="color:#4070a0">&#39;Note&#39;</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>list_dates <span style="color:#666">=</span> [item <span style="color:#007020;font-weight:bold">for</span> item <span style="color:#007020;font-weight:bold">in</span> data_columns <span style="color:#007020;font-weight:bold">if</span> item <span style="color:#007020;font-weight:bold">not</span> <span style="color:#007020;font-weight:bold">in</span> to_remove]
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Switzerland_sample <span style="color:#666">=</span> get_country_data(inflation_data,<span style="color:#4070a0">&#34;Switzerland&#34;</span>,list_dates)
+</span></span><span style="display:flex;"><span>Switzerland_sample<span style="color:#666">.</span>head(<span style="color:#40a070">20</span>)
+</span></span></code></pre></div><div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+<pre><code>.dataframe tbody tr th {
+    vertical-align: top;
+}
+
+.dataframe thead th {
+    text-align: right;
+}
+</code></pre>
+<p></style></p>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>YearMonth</th>
+      <th>HCPI</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1970-01</td>
+      <td>33.4</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1970-02</td>
+      <td>33.4</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>1970-03</td>
+      <td>33.4</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>1970-04</td>
+      <td>33.4</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>1970-05</td>
+      <td>33.7</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>1970-06</td>
+      <td>33.9</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>1970-07</td>
+      <td>34.0</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>1970-08</td>
+      <td>34.1</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>1970-09</td>
+      <td>34.3</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>1970-10</td>
+      <td>34.5</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>1970-11</td>
+      <td>34.9</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>1970-12</td>
+      <td>35.1</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>1971-01</td>
+      <td>35.3</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>1971-02</td>
+      <td>35.4</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>1971-03</td>
+      <td>35.7</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>1971-04</td>
+      <td>35.7</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>1971-05</td>
+      <td>36.1</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>1971-06</td>
+      <td>36.1</td>
+    </tr>
+    <tr>
+      <th>18</th>
+     [..](..) <td>1971-07</td>
+      <td>36.3</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>1971-08</td>
+      <td>36.3</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>visualize_cpi(Switzerland_sample)
+</span></span></code></pre></div><p><img src="/inflation_forecasting/output_10_0.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Switzerland_sample <span style="color:#666">=</span> get_monthly_inflation_from_CPI(Switzerland_sample)
+</span></span><span style="display:flex;"><span>Switzerland_sample<span style="color:#666">.</span>head(<span style="color:#40a070">20</span>)
+</span></span></code></pre></div><div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+<pre><code>.dataframe tbody tr th {
+    vertical-align: top;
+}
+
+.dataframe thead th {
+    text-align: right;
+}
+</code></pre>
+<p></style></p>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>YearMonth</th>
+      <th>HCPI</th>
+      <th>Monthly Inflation Rate</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1970-01</td>
+      <td>33.4</td>
+      <td>NaN</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1970-02</td>
+      <td>33.4</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>1970-03</td>
+      <td>33.4</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>1970-04</td>
+      <td>33.4</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>1970-05</td>
+      <td>33.7</td>
+      <td>0.898204</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>1970-06</td>
+      <td>33.9</td>
+      <td>0.593472</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>1970-07</td>
+      <td>34.0</td>
+      <td>0.294985</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>1970-08</td>
+      <td>34.1</td>
+      <td>0.294118</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>1970-09</td>
+      <td>34.3</td>
+      <td>0.58651</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>1970-10</td>
+      <td>34.5</td>
+      <td>0.58309</td>
+    </tr>
+    <tr>
+      <th>10</th>
+      <td>1970-11</td>
+      <td>34.9</td>
+      <td>1.15942</td>
+    </tr>
+    <tr>
+      <th>11</th>
+      <td>1970-12</td>
+      <td>35.1</td>
+      <td>0.573066</td>
+    </tr>
+    <tr>
+      <th>12</th>
+      <td>1971-01</td>
+      <td>35.3</td>
+      <td>0.569801</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>1971-02</td>
+      <td>35.4</td>
+      <td>0.283286</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>1971-03</td>
+      <td>35.7</td>
+      <td>0.847458</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>1971-04</td>
+      <td>35.7</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>1971-05</td>
+      <td>36.1</td>
+      <td>1.120448</td>
+    </tr>
+    <tr>
+      <th>17</th>
+      <td>1971-06</td>
+      <td>36.1</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>18</th>
+      <td>1971-07</td>
+      <td>36.3</td>
+      <td>0.554017</td>
+    </tr>
+    <tr>
+      <th>19</th>
+      <td>1971-08</td>
+      <td>36.3</td>
+      <td>0.0</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<h2 id="eda-and-visualizations">EDA and Visualizations:</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Switzerland_sample[<span style="color:#4070a0">&#39;YearMonth&#39;</span>] <span style="color:#666">=</span> Switzerland_sample[<span style="color:#4070a0">&#39;YearMonth&#39;</span>]<span style="color:#666">.</span>astype(<span style="color:#007020">str</span>)
+</span></span><span style="display:flex;"><span>selected_years <span style="color:#666">=</span> Switzerland_sample[<span style="color:#4070a0">&#39;YearMonth&#39;</span>]<span style="color:#666">.</span>unique()[::<span style="color:#40a070">11</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>figure(figsize<span style="color:#666">=</span>(<span style="color:#40a070">20</span>, <span style="color:#40a070">8</span>))
+</span></span><span style="display:flex;"><span>sns<span style="color:#666">.</span>lineplot(data<span style="color:#666">=</span>Switzerland_sample, x<span style="color:#666">=</span><span style="color:#4070a0">&#39;YearMonth&#39;</span>, y<span style="color:#666">=</span><span style="color:#4070a0">&#39;Monthly Inflation Rate&#39;</span>, marker<span style="color:#666">=</span><span style="color:#4070a0">&#39;o&#39;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>title(<span style="color:#4070a0">&#39;Monthly Inflation Rate for Switzerland (1970 - 2023)&#39;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">18</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>ylabel(<span style="color:#4070a0">&#39;Monthly Inflation Rate (%)&#39;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">16</span>) 
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>yticks(fontsize<span style="color:#666">=</span><span style="color:#40a070">14</span>)   
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>xlabel(<span style="color:#4070a0">&#39;YearMonth&#39;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">16</span>) 
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>xticks(selected_years)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>grid(<span style="color:#007020;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>tight_layout()
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>xticks(rotation<span style="color:#666">=</span><span style="color:#40a070">45</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>show()
+</span></span></code></pre></div><p><img src="/inflation_forecasting/output_13_0.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Switzerland_sample[<span style="color:#4070a0">&#39;YearMonth&#39;</span>] <span style="color:#666">=</span> Switzerland_sample[<span style="color:#4070a0">&#39;YearMonth&#39;</span>]<span style="color:#666">.</span>astype(<span style="color:#007020">str</span>)
+</span></span><span style="display:flex;"><span>selected_years <span style="color:#666">=</span> Switzerland_sample[<span style="color:#4070a0">&#39;YearMonth&#39;</span>]<span style="color:#666">.</span>unique()[::<span style="color:#40a070">12</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>rolling_mean <span style="color:#666">=</span> Switzerland_sample[<span style="color:#4070a0">&#39;Monthly Inflation Rate&#39;</span>]<span style="color:#666">.</span>rolling(window<span style="color:#666">=</span><span style="color:#40a070">12</span>)<span style="color:#666">.</span>mean()
+</span></span><span style="display:flex;"><span>rolling_std <span style="color:#666">=</span> Switzerland_sample[<span style="color:#4070a0">&#39;Monthly Inflation Rate&#39;</span>]<span style="color:#666">.</span>rolling(window<span style="color:#666">=</span><span style="color:#40a070">12</span>)<span style="color:#666">.</span>std()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>figure(figsize<span style="color:#666">=</span>(<span style="color:#40a070">22</span>, <span style="color:#40a070">8</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>sns<span style="color:#666">.</span>lineplot(data<span style="color:#666">=</span>Switzerland_sample, x<span style="color:#666">=</span><span style="color:#4070a0">&#39;YearMonth&#39;</span>, y<span style="color:#666">=</span><span style="color:#4070a0">&#39;Monthly Inflation Rate&#39;</span>, marker<span style="color:#666">=</span><span style="color:#4070a0">&#39;o&#39;</span>, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Inflation Rate&#39;</span>)
+</span></span><span style="display:flex;"><span>sns<span style="color:#666">.</span>lineplot(data<span style="color:#666">=</span>Switzerland_sample, x<span style="color:#666">=</span><span style="color:#4070a0">&#39;YearMonth&#39;</span>, y<span style="color:#666">=</span>rolling_mean, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;r&#39;</span>, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Rolling Mean&#39;</span>)
+</span></span><span style="display:flex;"><span>sns<span style="color:#666">.</span>lineplot(data<span style="color:#666">=</span>Switzerland_sample, x<span style="color:#666">=</span><span style="color:#4070a0">&#39;YearMonth&#39;</span>, y<span style="color:#666">=</span>rolling_std, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;g&#39;</span>, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Rolling Std&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>title(<span style="color:#4070a0">&#39;Inflation Rate for Switzerland with Rolling Mean and Std&#39;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">20</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>xlabel(<span style="color:#4070a0">&#39;Year&#39;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">18</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>ylabel(<span style="color:#4070a0">&#39;Value&#39;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">18</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>xticks(selected_years, fontsize<span style="color:#666">=</span><span style="color:#40a070">16</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>yticks(fontsize<span style="color:#666">=</span><span style="color:#40a070">12</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>grid(<span style="color:#007020;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>axhline(<span style="color:#40a070">0</span>, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;red&#39;</span>, linewidth<span style="color:#666">=</span><span style="color:#40a070">1</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>tight_layout()
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>xticks(rotation<span style="color:#666">=</span><span style="color:#40a070">45</span>) 
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>legend() 
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>show()
+</span></span></code></pre></div><p><img src="/inflation_forecasting/output_14_0.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>yearly_inflation <span style="color:#666">=</span> get_yearly_inflation_from_monthly(Switzerland_sample)
+</span></span><span style="display:flex;"><span>yearly_inflation<span style="color:#666">.</span>dropna(inplace<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>)
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>yearly_inflation[<span style="color:#4070a0">&#39;Year&#39;</span>] <span style="color:#666">=</span> yearly_inflation[<span style="color:#4070a0">&#39;Year&#39;</span>]<span style="color:#666">.</span>astype(<span style="color:#007020">str</span>)
+</span></span><span style="display:flex;"><span>selected_years <span style="color:#666">=</span> yearly_inflation[<span style="color:#4070a0">&#39;Year&#39;</span>]<span style="color:#666">.</span>unique()[::<span style="color:#40a070">2</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>figure(figsize<span style="color:#666">=</span>(<span style="color:#40a070">22</span>, <span style="color:#40a070">8</span>))
+</span></span><span style="display:flex;"><span>sns<span style="color:#666">.</span>lineplot(data<span style="color:#666">=</span>yearly_inflation, x<span style="color:#666">=</span><span style="color:#4070a0">&#39;Year&#39;</span>, y<span style="color:#666">=</span><span style="color:#4070a0">&#39;Yearly Inflation Rate (Avg)&#39;</span>, marker<span style="color:#666">=</span><span style="color:#4070a0">&#39;o&#39;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>title(<span style="color:#4070a0">&#39;Inflation Rate for Switzerland&#39;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">20</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>xlabel(<span style="color:#4070a0">&#39;Year&#39;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">18</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>ylabel(<span style="color:#4070a0">&#39;Inflation Rate&#39;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">18</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>xticks(selected_years, fontsize<span style="color:#666">=</span><span style="color:#40a070">16</span>) 
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>yticks(fontsize<span style="color:#666">=</span><span style="color:#40a070">16</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>yticks(np<span style="color:#666">.</span>arange(<span style="color:#007020">min</span>(yearly_inflation[<span style="color:#4070a0">&#39;Yearly Inflation Rate (Avg)&#39;</span>]), <span style="color:#007020">max</span>(yearly_inflation[<span style="color:#4070a0">&#39;Yearly Inflation Rate (Avg)&#39;</span>])<span style="color:#666">+</span><span style="color:#40a070">1</span>, <span style="color:#40a070">2</span>), fontsize<span style="color:#666">=</span><span style="color:#40a070">14</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>grid(<span style="color:#007020;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">for</span> idx, row <span style="color:#007020;font-weight:bold">in</span> yearly_inflation<span style="color:#666">.</span>iterrows():
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>annotate(<span style="color:#4070a0">f</span><span style="color:#4070a0">&#34;</span><span style="color:#70a0d0">{</span>row[<span style="color:#4070a0">&#39;Yearly Inflation Rate (Avg)&#39;</span>]<span style="color:#70a0d0">:</span><span style="color:#4070a0">.2f</span><span style="color:#70a0d0">}</span><span style="color:#4070a0">%&#34;</span>,
+</span></span><span style="display:flex;"><span>                 (row[<span style="color:#4070a0">&#39;Year&#39;</span>], row[<span style="color:#4070a0">&#39;Yearly Inflation Rate (Avg)&#39;</span>]),
+</span></span><span style="display:flex;"><span>                 textcoords<span style="color:#666">=</span><span style="color:#4070a0">&#34;offset points&#34;</span>, xytext<span style="color:#666">=</span>(<span style="color:#40a070">0</span>,<span style="color:#40a070">5</span>), ha<span style="color:#666">=</span><span style="color:#4070a0">&#39;center&#39;</span>,
+</span></span><span style="display:flex;"><span>                 fontsize<span style="color:#666">=</span><span style="color:#40a070">10</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>axhline(<span style="color:#40a070">0</span>, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;red&#39;</span>,
+</span></span><span style="display:flex;"><span>            linewidth<span style="color:#666">=</span><span style="color:#40a070">1</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>tight_layout()
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>xticks(rotation<span style="color:#666">=</span><span style="color:#40a070">45</span>)  
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>show()
+</span></span></code></pre></div><p><img src="/inflation_forecasting/output_16_0.png" alt="png"></p>
+<h3 id="observations">Observations:</h3>
+<ul>
+<li>No clear trend or seasonality is shown from Switzerland&rsquo;s yearly inflation rates.</li>
+<li>Inflation rates go below zero from 2007 to 2015 with an evidence spike or upward trend from 2019 to 2021.</li>
+<li>Overall, the series exhibits stability for each 5 years.</li>
+</ul>
+<h2 id="statistical-analysis">Statistical Analysis:</h2>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>yearly_inflation[<span style="color:#4070a0">&#39;Year&#39;</span>] <span style="color:#666">=</span> yearly_inflation[<span style="color:#4070a0">&#39;Year&#39;</span>]<span style="color:#666">.</span>astype(<span style="color:#007020">str</span>)
+</span></span><span style="display:flex;"><span>selected_years <span style="color:#666">=</span> yearly_inflation[<span style="color:#4070a0">&#39;Year&#39;</span>]<span style="color:#666">.</span>unique()[::<span style="color:#40a070">2</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>rolling_mean <span style="color:#666">=</span> yearly_inflation[<span style="color:#4070a0">&#39;Yearly Inflation Rate (Avg)&#39;</span>]<span style="color:#666">.</span>rolling(window<span style="color:#666">=</span><span style="color:#40a070">2</span>)<span style="color:#666">.</span>mean()
+</span></span><span style="display:flex;"><span>rolling_std <span style="color:#666">=</span> yearly_inflation[<span style="color:#4070a0">&#39;Yearly Inflation Rate (Avg)&#39;</span>]<span style="color:#666">.</span>rolling(window<span style="color:#666">=</span><span style="color:#40a070">2</span>)<span style="color:#666">.</span>std()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>figure(figsize<span style="color:#666">=</span>(<span style="color:#40a070">22</span>, <span style="color:#40a070">8</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>sns<span style="color:#666">.</span>lineplot(data<span style="color:#666">=</span>yearly_inflation, x<span style="color:#666">=</span><span style="color:#4070a0">&#39;Year&#39;</span>, y<span style="color:#666">=</span><span style="color:#4070a0">&#39;Yearly Inflation Rate (Avg)&#39;</span>, marker<span style="color:#666">=</span><span style="color:#4070a0">&#39;o&#39;</span>, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Inflation Rate&#39;</span>)
+</span></span><span style="display:flex;"><span>sns<span style="color:#666">.</span>lineplot(data<span style="color:#666">=</span>yearly_inflation, x<span style="color:#666">=</span><span style="color:#4070a0">&#39;Year&#39;</span>, y<span style="color:#666">=</span>rolling_mean, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;r&#39;</span>, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Rolling Mean&#39;</span>)
+</span></span><span style="display:flex;"><span>sns<span style="color:#666">.</span>lineplot(data<span style="color:#666">=</span>yearly_inflation, x<span style="color:#666">=</span><span style="color:#4070a0">&#39;Year&#39;</span>, y<span style="color:#666">=</span>rolling_std, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;g&#39;</span>, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Rolling Std&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>title(<span style="color:#4070a0">&#39;Inflation Rate for Switzerland with Rolling Mean and Std&#39;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">20</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>xlabel(<span style="color:#4070a0">&#39;Year&#39;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">18</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>ylabel(<span style="color:#4070a0">&#39;Value&#39;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">18</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>xticks(selected_years, fontsize<span style="color:#666">=</span><span style="color:#40a070">16</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>yticks(fontsize<span style="color:#666">=</span><span style="color:#40a070">12</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>grid(<span style="color:#007020;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>axhline(<span style="color:#40a070">0</span>, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;red&#39;</span>, linewidth<span style="color:#666">=</span><span style="color:#40a070">1</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>tight_layout()
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>xticks(rotation<span style="color:#666">=</span><span style="color:#40a070">45</span>) 
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>legend(fontsize<span style="color:#666">=</span><span style="color:#4070a0">&#39;large&#39;</span>)  
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>show()
+</span></span></code></pre></div><p><img src="/inflation_forecasting/output_19_0.png" alt="png"></p>
+<h3 id="observations-1">Observations:</h3>
+<ul>
+<li>The moving average of 12 months fits the series well over the years.</li>
+<li>Moving std is unable to capture the sudden upward and downward trend between in the series.</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Switzerland_sample<span style="color:#666">.</span>dropna(inplace<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>)
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Switzerland_sample[<span style="color:#4070a0">&#39;Date&#39;</span>] <span style="color:#666">=</span> pd<span style="color:#666">.</span>to_datetime(Switzerland_sample[<span style="color:#4070a0">&#39;YearMonth&#39;</span>])
+</span></span><span style="display:flex;"><span>Switzerland_sample<span style="color:#666">.</span>set_index(<span style="color:#4070a0">&#39;Date&#39;</span>, inplace<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>decomposition <span style="color:#666">=</span> seasonal_decompose(Switzerland_sample[<span style="color:#4070a0">&#39;Monthly Inflation Rate&#39;</span>], model<span style="color:#666">=</span><span style="color:#4070a0">&#39;additive&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>figure(figsize<span style="color:#666">=</span>(<span style="color:#40a070">20</span>, <span style="color:#40a070">12</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#60a0b0;font-style:italic"># Original</span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>subplot(<span style="color:#40a070">4</span>, <span style="color:#40a070">1</span>, <span style="color:#40a070">1</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>plot(Switzerland_sample[<span style="color:#4070a0">&#39;Monthly Inflation Rate&#39;</span>], label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Original&#39;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>legend(loc<span style="color:#666">=</span><span style="color:#4070a0">&#39;upper left&#39;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>title(<span style="color:#4070a0">&#39;Original Time Series&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#60a0b0;font-style:italic"># Trend</span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>subplot(<span style="color:#40a070">4</span>, <span style="color:#40a070">1</span>, <span style="color:#40a070">2</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>plot(decomposition<span style="color:#666">.</span>trend, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Trend&#39;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>legend(loc<span style="color:#666">=</span><span style="color:#4070a0">&#39;upper left&#39;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>title(<span style="color:#4070a0">&#39;Trend&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#60a0b0;font-style:italic"># Seasonal</span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>subplot(<span style="color:#40a070">4</span>, <span style="color:#40a070">1</span>, <span style="color:#40a070">3</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>plot(decomposition<span style="color:#666">.</span>seasonal, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Seasonal&#39;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>legend(loc<span style="color:#666">=</span><span style="color:#4070a0">&#39;upper left&#39;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>title(<span style="color:#4070a0">&#39;Seasonal&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#60a0b0;font-style:italic"># Residual</span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>subplot(<span style="color:#40a070">4</span>, <span style="color:#40a070">1</span>, <span style="color:#40a070">4</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>plot(decomposition<span style="color:#666">.</span>resid, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Residual&#39;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>legend(loc<span style="color:#666">=</span><span style="color:#4070a0">&#39;upper left&#39;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>title(<span style="color:#4070a0">&#39;Residual&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>tight_layout()
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>show()
+</span></span></code></pre></div><p><img src="/inflation_forecasting/output_22_0.png" alt="png"></p>
+<h3 id="observations-2">Observations:</h3>
+<ul>
+<li>We can see no clear observation of trends in the series from 1970 till 1990.</li>
+<li>Slight downward trend from 1990 to 2000.</li>
+<li>A seasonable trend is clearly observable from the above graph.</li>
+<li>Residual shows a very stable series with constant means across the years.</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>adf_test(Switzerland_sample[<span style="color:#4070a0">&#34;Monthly Inflation Rate&#34;</span>])
+</span></span></code></pre></div><pre><code>======= Augmented Dickey-Fuller Test Results =======
+
+1. ADF Test Statistic: -2.759119
+2. P-value: 0.064355
+3. Used Lags: 12
+4. Used Observations: 625
+5. Critical Values:
+	1%: -3.440856
+	5%: -2.866175
+	10%: -2.569239
+
+Weak evidence against null hypothesis, time series has a unit root, indicating it is non-stationary.
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>series_transformation(Switzerland_sample[<span style="color:#4070a0">&#34;Monthly Inflation Rate&#34;</span>])
+</span></span></code></pre></div><p><img src="/inflation_forecasting/output_25_0.png" alt="png"></p>
+<pre><code>P-value = 0.064355, the series is likely non-stationary.
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Switzerland_sample[<span style="color:#4070a0">&#39;Differenced&#39;</span>] <span style="color:#666">=</span> Switzerland_sample[<span style="color:#4070a0">&#39;Monthly Inflation Rate&#39;</span>]<span style="color:#666">.</span>diff()
+</span></span><span style="display:flex;"><span>Switzerland_sample<span style="color:#666">.</span>dropna(inplace<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>Switzerland_sample<span style="color:#666">.</span>head(<span style="color:#40a070">20</span>)
+</span></span></code></pre></div><div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+<pre><code>.dataframe tbody tr th {
+    vertical-align: top;
+}
+
+.dataframe thead th {
+    text-align: right;
+}
+</code></pre>
+<p></style></p>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>YearMonth</th>
+      <th>HCPI</th>
+      <th>Monthly Inflation Rate</th>
+      <th>Differenced</th>
+    </tr>
+    <tr>
+      <th>Date</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1970-03-01</th>
+      <td>1970-03</td>
+      <td>33.4</td>
+      <td>0.0</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>1970-04-01</th>
+      <td>1970-04</td>
+      <td>33.4</td>
+      <td>0.0</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>1970-05-01</th>
+      <td>1970-05</td>
+      <td>33.7</td>
+      <td>0.898204</td>
+      <td>0.898204</td>
+    </tr>
+    <tr>
+      <th>1970-06-01</th>
+      <td>1970-06</td>
+      <td>33.9</td>
+      <td>0.593472</td>
+      <td>-0.304732</td>
+    </tr>
+    <tr>
+      <th>1970-07-01</th>
+      <td>1970-07</td>
+      <td>34.0</td>
+      <td>0.294985</td>
+      <td>-0.298487</td>
+    </tr>
+    <tr>
+      <th>1970-08-01</th>
+      <td>1970-08</td>
+      <td>34.1</td>
+      <td>0.294118</td>
+      <td>-0.000868</td>
+    </tr>
+    <tr>
+      <th>1970-09-01</th>
+      <td>1970-09</td>
+      <td>34.3</td>
+      <td>0.58651</td>
+      <td>0.292393</td>
+    </tr>
+    <tr>
+      <th>1970-10-01</th>
+      <td>1970-10</td>
+      <td>34.5</td>
+      <td>0.58309</td>
+      <td>-0.00342</td>
+    </tr>
+    <tr>
+      <th>1970-11-01</th>
+      <td>1970-11</td>
+      <td>34.9</td>
+      <td>1.15942</td>
+      <td>0.57633</td>
+    </tr>
+    <tr>
+      <th>1970-12-01</th>
+      <td>1970-12</td>
+      <td>35.1</td>
+      <td>0.573066</td>
+      <td>-0.586354</td>
+    </tr>
+    <tr>
+      <th>1971-01-01</th>
+      <td>1971-01</td>
+      <td>35.3</td>
+      <td>0.569801</td>
+      <td>-0.003265</td>
+    </tr>
+    <tr>
+      <th>1971-02-01</th>
+      <td>1971-02</td>
+      <td>35.4</td>
+      <td>0.283286</td>
+      <td>-0.286514</td>
+    </tr>
+    <tr>
+      <th>1971-03-01</th>
+      <td>1971-03</td>
+      <td>35.7</td>
+      <td>0.847458</td>
+      <td>0.564172</td>
+    </tr>
+    <tr>
+      <th>1971-04-01</th>
+      <td>1971-04</td>
+      <td>35.7</td>
+      <td>0.0</td>
+      <td>-0.847458</td>
+    </tr>
+    <tr>
+      <th>1971-05-01</th>
+      <td>1971-05</td>
+      <td>36.1</td>
+      <td>1.120448</td>
+      <td>1.120448</td>
+    </tr>
+    <tr>
+      <th>1971-06-01</th>
+      <td>1971-06</td>
+      <td>36.1</td>
+      <td>0.0</td>
+      <td>-1.120448</td>
+    </tr>
+    <tr>
+      <th>1971-07-01</th>
+      <td>1971-07</td>
+      <td>36.3</td>
+      <td>0.554017</td>
+      <td>0.554017</td>
+    </tr>
+    <tr>
+      <th>1971-08-01</th>
+      <td>1971-08</td>
+      <td>36.3</td>
+      <td>0.0</td>
+      <td>-0.554017</td>
+    </tr>
+    <tr>
+      <th>1971-09-01</th>
+      <td>1971-09</td>
+      <td>36.6</td>
+      <td>0.826446</td>
+      <td>0.826446</td>
+    </tr>
+    <tr>
+      <th>1971-10-01</th>
+      <td>1971-10</td>
+      <td>36.7</td>
+      <td>0.273224</td>
+      <td>-0.553222</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>series_transformation(Switzerland_sample[<span style="color:#4070a0">&#34;Differenced&#34;</span>])
+</span></span></code></pre></div><p><img src="/inflation_forecasting/output_27_0.png" alt="png"></p>
+<pre><code>P-value = 0.000000, the series is likely stationary.
+</code></pre>
+<h3 id="observations-3">Observations:</h3>
+<ul>
+<li>P-value: 0.064355 of ADF test shows slight non-stationary properties in the series.</li>
+<li>Taking first order differencing results in P-value of 0.00000, makes the series stationary.</li>
+<li>In auto-correlation plot, spikes at 0, 1,3,6,9,10,11, given the length of the time series we won&rsquo;t consider all lags.</li>
+<li>In the partial autocorrection plot, we see significant spikes at 0,1,3,4,5,9 and 11, terms for moving average component of the time series, but we won&rsquo;t consider all terms to avoid the risk of over-fitting.</li>
+<li>we can see how first order differencing changed the lags of autocorrection plot significantly and infunce the significant spikes in lags.</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Switzerland_sample[<span style="color:#4070a0">&#34;Monthly Inflation Rate&#34;</span>] <span style="color:#666">=</span> Switzerland_sample[<span style="color:#4070a0">&#34;Monthly Inflation Rate&#34;</span>]<span style="color:#666">.</span>astype(<span style="color:#007020">float</span>)
+</span></span><span style="display:flex;"><span>Switzerland_sample<span style="color:#666">.</span>head(<span style="color:#40a070">20</span>)
+</span></span></code></pre></div><div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+<pre><code>.dataframe tbody tr th {
+    vertical-align: top;
+}
+
+.dataframe thead th {
+    text-align: right;
+}
+</code></pre>
+<p></style></p>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>YearMonth</th>
+      <th>HCPI</th>
+      <th>Monthly Inflation Rate</th>
+      <th>Differenced</th>
+    </tr>
+    <tr>
+      <th>Date</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>1970-03-01</th>
+      <td>1970-03</td>
+      <td>33.4</td>
+      <td>0.000000</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>1970-04-01</th>
+      <td>1970-04</td>
+      <td>33.4</td>
+      <td>0.000000</td>
+      <td>0.0</td>
+    </tr>
+    <tr>
+      <th>1970-05-01</th>
+      <td>1970-05</td>
+      <td>33.7</td>
+      <td>0.898204</td>
+      <td>0.898204</td>
+    </tr>
+    <tr>
+      <th>1970-06-01</th>
+      <td>1970-06</td>
+      <td>33.9</td>
+      <td>0.593472</td>
+      <td>-0.304732</td>
+    </tr>
+    <tr>
+      <th>1970-07-01</th>
+      <td>1970-07</td>
+      <td>34.0</td>
+      <td>0.294985</td>
+      <td>-0.298487</td>
+    </tr>
+    <tr>
+      <th>1970-08-01</th>
+      <td>1970-08</td>
+      <td>34.1</td>
+      <td>0.294118</td>
+      <td>-0.000868</td>
+    </tr>
+    <tr>
+      <th>1970-09-01</th>
+      <td>1970-09</td>
+      <td>34.3</td>
+      <td>0.586510</td>
+      <td>0.292393</td>
+    </tr>
+    <tr>
+      <th>1970-10-01</th>
+      <td>1970-10</td>
+      <td>34.5</td>
+      <td>0.583090</td>
+      <td>-0.00342</td>
+    </tr>
+    <tr>
+      <th>1970-11-01</th>
+      <td>1970-11</td>
+      <td>34.9</td>
+      <td>1.159420</td>
+      <td>0.57633</td>
+    </tr>
+    <tr>
+      <th>1970-12-01</th>
+      <td>1970-12</td>
+      <td>35.1</td>
+      <td>0.573066</td>
+      <td>-0.586354</td>
+    </tr>
+    <tr>
+      <th>1971-01-01</th>
+      <td>1971-01</td>
+      <td>35.3</td>
+      <td>0.569801</td>
+      <td>-0.003265</td>
+    </tr>
+    <tr>
+      <th>1971-02-01</th>
+      <td>1971-02</td>
+      <td>35.4</td>
+      <td>0.283286</td>
+      <td>-0.286514</td>
+    </tr>
+    <tr>
+      <th>1971-03-01</th>
+      <td>1971-03</td>
+      <td>35.7</td>
+      <td>0.847458</td>
+      <td>0.564172</td>
+    </tr>
+    <tr>
+      <th>1971-04-01</th>
+      <td>1971-04</td>
+      <td>35.7</td>
+      <td>0.000000</td>
+      <td>-0.847458</td>
+    </tr>
+    <tr>
+      <th>1971-05-01</th>
+      <td>1971-05</td>
+      <td>36.1</td>
+      <td>1.120448</td>
+      <td>1.120448</td>
+    </tr>
+    <tr>
+      <th>1971-06-01</th>
+      <td>1971-06</td>
+      <td>36.1</td>
+      <td>0.000000</td>
+      <td>-1.120448</td>
+    </tr>
+    <tr>
+      <th>1971-07-01</th>
+      <td>1971-07</td>
+      <td>36.3</td>
+      <td>0.554017</td>
+      <td>0.554017</td>
+    </tr>
+    <tr>
+      <th>1971-08-01</th>
+      <td>1971-08</td>
+      <td>36.3</td>
+      <td>0.000000</td>
+      <td>-0.554017</td>
+    </tr>
+    <tr>
+      <th>1971-09-01</th>
+      <td>1971-09</td>
+      <td>36.6</td>
+      <td>0.826446</td>
+      <td>0.826446</td>
+    </tr>
+    <tr>
+      <th>1971-10-01</th>
+      <td>1971-10</td>
+      <td>36.7</td>
+      <td>0.273224</td>
+      <td>-0.553222</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<h2 id="arima-model">ARIMA Model:</h2>
+<h4 id="search-arima-parameters">Search ARIMA parameters:</h4>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>series <span style="color:#666">=</span> Switzerland_sample[<span style="color:#4070a0">&#34;Monthly Inflation Rate&#34;</span>]
+</span></span></code></pre></div><h3 id="full-data-parm-search">Full Data Parm Search:</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>train_size <span style="color:#666">=</span> <span style="color:#007020">int</span>(<span style="color:#007020">len</span>(series) <span style="color:#666">*</span> <span style="color:#40a070">0.9</span>)
+</span></span><span style="display:flex;"><span>train, test <span style="color:#666">=</span> series[<span style="color:#40a070">0</span>:train_size], series[train_size:]
+</span></span><span style="display:flex;"><span>best_order <span style="color:#666">=</span> find_best_arima_params(train)
+</span></span><span style="display:flex;"><span>best_order
+</span></span></code></pre></div><pre><code>Best ARIMA(4, 1, 4) model - AIC: 382.45590772734045
+(4, 1, 4)
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>best_order_metric <span style="color:#666">=</span> find_best_arima_params_metric(train)
+</span></span><span style="display:flex;"><span>best_order_metric
+</span></span></code></pre></div><pre><code>Best ARIMA(4, 0, 4) model - MSE: 0.11046128064195067
+(4, 0, 4)
+</code></pre>
+<h4 id="train-and-predict-using-arima-model-with-the-best-arima-order-extracted">Train and predict using ARIMA model with the best ARIMA order extracted:</h4>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>series <span style="color:#666">=</span> Switzerland_sample[<span style="color:#4070a0">&#34;Monthly Inflation Rate&#34;</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>train_size <span style="color:#666">=</span> <span style="color:#007020">int</span>(<span style="color:#007020">len</span>(series) <span style="color:#666">*</span> <span style="color:#40a070">0.8</span>)
+</span></span><span style="display:flex;"><span>train, test <span style="color:#666">=</span> series[<span style="color:#40a070">0</span>:train_size], series[train_size:]
+</span></span><span style="display:flex;"><span>train <span style="color:#666">=</span> train[<span style="color:#666">-</span><span style="color:#40a070">100</span>:]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>best_order <span style="color:#666">=</span> (<span style="color:#40a070">4</span>, <span style="color:#40a070">1</span>, <span style="color:#40a070">4</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>model <span style="color:#666">=</span> ARIMA(train, order<span style="color:#666">=</span>best_order)
+</span></span><span style="display:flex;"><span>model_fit <span style="color:#666">=</span> model<span style="color:#666">.</span>fit()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>forecast <span style="color:#666">=</span> model_fit<span style="color:#666">.</span>forecast(steps<span style="color:#666">=</span><span style="color:#007020">len</span>(test))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>rmspe <span style="color:#666">=</span> np<span style="color:#666">.</span>sqrt(mean_squared_error(test, forecast))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>test_length <span style="color:#666">=</span> <span style="color:#007020">len</span>(test)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>figure(figsize<span style="color:#666">=</span>(<span style="color:#40a070">25</span>, <span style="color:#40a070">10</span>))
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>plot(train, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Training Data&#39;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>plot(test<span style="color:#666">.</span>index, forecast, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;red&#39;</span>, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Predicted&#39;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>plot(test<span style="color:#666">.</span>index, test, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;green&#39;</span>, linestyle<span style="color:#666">=</span><span style="color:#4070a0">&#39;dashed&#39;</span>, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Actual&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>title(<span style="color:#4070a0">&#34;ARIMA&#34;</span><span style="color:#666">+</span><span style="color:#007020">str</span>(best_order)<span style="color:#666">+</span><span style="color:#4070a0">&#34; Forecast vs Actuals&#34;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">20</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>legend(loc<span style="color:#666">=</span><span style="color:#4070a0">&#39;best&#39;</span>, prop<span style="color:#666">=</span>{<span style="color:#4070a0">&#39;size&#39;</span>: <span style="color:#40a070">16</span>})
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>grid(<span style="color:#007020;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>annotate(<span style="color:#4070a0">f</span><span style="color:#4070a0">&#39;RMSPE: </span><span style="color:#70a0d0">{</span>rmspe<span style="color:#70a0d0">:</span><span style="color:#4070a0">.3f</span><span style="color:#70a0d0">}</span><span style="color:#4070a0">&#39;</span>, xy<span style="color:#666">=</span>(<span style="color:#40a070">0.75</span>, <span style="color:#40a070">0.95</span>), xycoords<span style="color:#666">=</span><span style="color:#4070a0">&#39;axes fraction&#39;</span>,
+</span></span><span style="display:flex;"><span>             fontsize<span style="color:#666">=</span><span style="color:#40a070">12</span>, bbox<span style="color:#666">=</span><span style="color:#007020">dict</span>(boxstyle<span style="color:#666">=</span><span style="color:#4070a0">&#34;round,pad=0.3&#34;</span>, edgecolor<span style="color:#666">=</span><span style="color:#4070a0">&#34;black&#34;</span>, facecolor<span style="color:#666">=</span><span style="color:#4070a0">&#34;aliceblue&#34;</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>annotate(<span style="color:#4070a0">f</span><span style="color:#4070a0">&#39;Test Length: </span><span style="color:#70a0d0">{</span>test_length<span style="color:#70a0d0">}</span><span style="color:#4070a0"> months&#39;</span>, xy<span style="color:#666">=</span>(<span style="color:#40a070">0.02</span>, <span style="color:#40a070">0.95</span>), xycoords<span style="color:#666">=</span><span style="color:#4070a0">&#39;axes fraction&#39;</span>,
+</span></span><span style="display:flex;"><span>             fontsize<span style="color:#666">=</span><span style="color:#40a070">14</span>, bbox<span style="color:#666">=</span><span style="color:#007020">dict</span>(boxstyle<span style="color:#666">=</span><span style="color:#4070a0">&#34;round,pad=0.3&#34;</span>, edgecolor<span style="color:#666">=</span><span style="color:#4070a0">&#34;black&#34;</span>, facecolor<span style="color:#666">=</span><span style="color:#4070a0">&#34;aliceblue&#34;</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>years <span style="color:#666">=</span> pd<span style="color:#666">.</span>date_range(start<span style="color:#666">=</span>train<span style="color:#666">.</span>index<span style="color:#666">.</span>min(), end<span style="color:#666">=</span>test<span style="color:#666">.</span>index<span style="color:#666">.</span>max(), freq<span style="color:#666">=</span><span style="color:#4070a0">&#39;2Y&#39;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>xticks(years, years<span style="color:#666">.</span>strftime(<span style="color:#4070a0">&#39;%Y&#39;</span>), fontsize<span style="color:#666">=</span><span style="color:#40a070">14</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>yticks(fontsize<span style="color:#666">=</span><span style="color:#40a070">14</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>show()
+</span></span></code></pre></div><p><img src="/inflation_forecasting/output_36_0.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>results_df <span style="color:#666">=</span> pd<span style="color:#666">.</span>DataFrame({
+</span></span><span style="display:flex;"><span>    <span style="color:#4070a0">&#39;Actual&#39;</span>: test,
+</span></span><span style="display:flex;"><span>    <span style="color:#4070a0">&#39;Predicted&#39;</span>: forecast
+</span></span><span style="display:flex;"><span>})
+</span></span><span style="display:flex;"><span>results_df
+</span></span></code></pre></div><div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+<pre><code>.dataframe tbody tr th {
+    vertical-align: top;
+}
+
+.dataframe thead th {
+    text-align: right;
+}
+</code></pre>
+<p></style></p>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Actual</th>
+      <th>Predicted</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>2012-08-01</th>
+      <td>0.000000</td>
+      <td>-0.003746</td>
+    </tr>
+    <tr>
+      <th>2012-09-01</th>
+      <td>0.296736</td>
+      <td>0.221879</td>
+    </tr>
+    <tr>
+      <th>2012-10-01</th>
+      <td>0.098619</td>
+      <td>0.307202</td>
+    </tr>
+    <tr>
+      <th>2012-11-01</th>
+      <td>-0.295567</td>
+      <td>-0.000672</td>
+    </tr>
+    <tr>
+      <th>2012-12-01</th>
+      <td>-0.197628</td>
+      <td>-0.157315</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>2022-11-01</th>
+      <td>0.000000</td>
+      <td>0.010762</td>
+    </tr>
+    <tr>
+      <th>2022-12-01</th>
+      <td>-0.223070</td>
+      <td>-0.031386</td>
+    </tr>
+    <tr>
+      <th>2023-01-01</th>
+      <td>0.601915</td>
+      <td>-0.095671</td>
+    </tr>
+    <tr>
+      <th>2023-02-01</th>
+      <td>0.746467</td>
+      <td>0.086958</td>
+    </tr>
+    <tr>
+      <th>2023-03-01</th>
+      <td>0.153655</td>
+      <td>0.127167</td>
+    </tr>
+  </tbody>
+</table>
+<p>128 rows × 2 columns</p>
+</div>
+<h3 id="sarimax-model">SARIMAX Model:</h3>
+<h4 id="search-sarimax-parameters-space">Search SARIMAX Parameters Space:</h4>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>model <span style="color:#666">=</span>auto_arima(train, 
+</span></span><span style="display:flex;"><span>                  start_p<span style="color:#666">=</span><span style="color:#40a070">1</span>, 
+</span></span><span style="display:flex;"><span>                  start_q<span style="color:#666">=</span><span style="color:#40a070">1</span>,
+</span></span><span style="display:flex;"><span>                  max_p<span style="color:#666">=</span><span style="color:#40a070">8</span>, 
+</span></span><span style="display:flex;"><span>                  max_q<span style="color:#666">=</span><span style="color:#40a070">8</span>,
+</span></span><span style="display:flex;"><span>                  start_P<span style="color:#666">=</span><span style="color:#40a070">0</span>,
+</span></span><span style="display:flex;"><span>                  start_Q<span style="color:#666">=</span><span style="color:#40a070">0</span>,
+</span></span><span style="display:flex;"><span>                  max_P<span style="color:#666">=</span><span style="color:#40a070">8</span>,
+</span></span><span style="display:flex;"><span>                  max_Q<span style="color:#666">=</span><span style="color:#40a070">8</span>,
+</span></span><span style="display:flex;"><span>                  m<span style="color:#666">=</span><span style="color:#40a070">12</span>,
+</span></span><span style="display:flex;"><span>                  seasonal<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>, 
+</span></span><span style="display:flex;"><span>                  trace<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>,
+</span></span><span style="display:flex;"><span>                  d<span style="color:#666">=</span><span style="color:#40a070">1</span>,
+</span></span><span style="display:flex;"><span>                  D<span style="color:#666">=</span><span style="color:#40a070">1</span>,
+</span></span><span style="display:flex;"><span>                  error_action<span style="color:#666">=</span><span style="color:#4070a0">&#39;warn&#39;</span>, 
+</span></span><span style="display:flex;"><span>                  suppress_warnings<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>, 
+</span></span><span style="display:flex;"><span>                  random_state <span style="color:#666">=</span> <span style="color:#40a070">20</span>,
+</span></span><span style="display:flex;"><span>                  n_fits<span style="color:#666">=</span><span style="color:#40a070">100</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020">print</span>(model<span style="color:#666">.</span>summary())
+</span></span></code></pre></div><pre><code>Performing stepwise search to minimize aic
+ ARIMA(1,1,1)(0,1,0)[12]             : AIC=80.006, Time=0.02 sec
+ ARIMA(0,1,0)(0,1,0)[12]             : AIC=116.568, Time=0.01 sec
+ ARIMA(1,1,0)(1,1,0)[12]             : AIC=76.938, Time=0.08 sec
+ ARIMA(0,1,1)(0,1,1)[12]             : AIC=inf, Time=0.59 sec
+ ARIMA(1,1,0)(0,1,0)[12]             : AIC=89.617, Time=0.03 sec
+ ARIMA(1,1,0)(2,1,0)[12]             : AIC=64.576, Time=0.85 sec
+ ARIMA(1,1,0)(3,1,0)[12]             : AIC=66.550, Time=0.41 sec
+ ARIMA(1,1,0)(2,1,1)[12]             : AIC=66.486, Time=1.30 sec
+ ARIMA(1,1,0)(1,1,1)[12]             : AIC=67.003, Time=0.13 sec
+ ARIMA(1,1,0)(3,1,1)[12]             : AIC=inf, Time=1.84 sec
+ ARIMA(0,1,0)(2,1,0)[12]             : AIC=91.023, Time=0.10 sec
+ ARIMA(2,1,0)(2,1,0)[12]             : AIC=64.008, Time=0.40 sec
+ ARIMA(2,1,0)(1,1,0)[12]             : AIC=73.340, Time=0.10 sec
+ ARIMA(2,1,0)(3,1,0)[12]             : AIC=66.008, Time=0.67 sec
+ ARIMA(2,1,0)(2,1,1)[12]             : AIC=66.007, Time=0.55 sec
+ ARIMA(2,1,0)(1,1,1)[12]             : AIC=65.355, Time=0.23 sec
+ ARIMA(2,1,0)(3,1,1)[12]             : AIC=inf, Time=2.03 sec
+ ARIMA(3,1,0)(2,1,0)[12]             : AIC=59.600, Time=0.22 sec
+ ARIMA(3,1,0)(1,1,0)[12]             : AIC=68.426, Time=0.12 sec
+ ARIMA(3,1,0)(3,1,0)[12]             : AIC=61.456, Time=0.60 sec
+ ARIMA(3,1,0)(2,1,1)[12]             : AIC=60.408, Time=1.20 sec
+ ARIMA(3,1,0)(1,1,1)[12]             : AIC=59.438, Time=0.32 sec
+ ARIMA(3,1,0)(0,1,1)[12]             : AIC=57.682, Time=0.13 sec
+ ARIMA(3,1,0)(0,1,0)[12]             : AIC=81.509, Time=0.02 sec
+ ARIMA(3,1,0)(0,1,2)[12]             : AIC=59.338, Time=0.45 sec
+ ARIMA(3,1,0)(1,1,2)[12]             : AIC=inf, Time=1.05 sec
+ ARIMA(2,1,0)(0,1,1)[12]             : AIC=63.492, Time=0.11 sec
+ ARIMA(4,1,0)(0,1,1)[12]             : AIC=59.536, Time=0.13 sec
+ ARIMA(3,1,1)(0,1,1)[12]             : AIC=inf, Time=1.04 sec
+ ARIMA(2,1,1)(0,1,1)[12]             : AIC=inf, Time=0.91 sec
+ ARIMA(4,1,1)(0,1,1)[12]             : AIC=inf, Time=0.66 sec
+ ARIMA(3,1,0)(0,1,1)[12] intercept   : AIC=59.680, Time=0.27 sec
+
+Best model:  ARIMA(3,1,0)(0,1,1)[12]          
+Total fit time: 16.612 seconds
+                                      SARIMAX Results                                       
+============================================================================================
+Dep. Variable:                                    y   No. Observations:                  100
+Model:             SARIMAX(3, 1, 0)x(0, 1, [1], 12)   Log Likelihood                 -23.841
+Date:                              Mon, 13 Nov 2023   AIC                             57.682
+Time:                                      14:56:23   BIC                             70.011
+Sample:                                  04-01-2004   HQIC                            62.646
+                                       - 07-01-2012                                         
+Covariance Type:                                opg                                         
+==============================================================================
+                 coef    std err          z      P&gt;|z|      [0.025      0.975]
+------------------------------------------------------------------------------
+ar.L1         -0.7077      0.142     -4.974      0.000      -0.987      -0.429
+ar.L2         -0.3956      0.181     -2.191      0.028      -0.750      -0.042
+ar.L3         -0.3042      0.135     -2.245      0.025      -0.570      -0.039
+ma.S.L12      -0.7500      0.141     -5.333      0.000      -1.026      -0.474
+sigma2         0.0898      0.014      6.219      0.000       0.061       0.118
+===================================================================================
+Ljung-Box (L1) (Q):                   0.05   Jarque-Bera (JB):                12.57
+Prob(Q):                              0.83   Prob(JB):                         0.00
+Heteroskedasticity (H):               1.72   Skew:                            -0.76
+Prob(H) (two-sided):                  0.15   Kurtosis:                         4.08
+===================================================================================
+
+Warnings:
+[1] Covariance matrix calculated using the outer product of gradients (complex-step).
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>series <span style="color:#666">=</span> Switzerland_sample[<span style="color:#4070a0">&#34;Monthly Inflation Rate&#34;</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>train_size <span style="color:#666">=</span> <span style="color:#007020">int</span>(<span style="color:#007020">len</span>(series) <span style="color:#666">*</span> <span style="color:#40a070">0.8</span>)
+</span></span><span style="display:flex;"><span>train, test <span style="color:#666">=</span> series[<span style="color:#40a070">0</span>:train_size], series[train_size:]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>model <span style="color:#666">=</span> SARIMAX(train,
+</span></span><span style="display:flex;"><span>                order<span style="color:#666">=</span>(<span style="color:#40a070">3</span>, <span style="color:#40a070">1</span>, <span style="color:#40a070">0</span>),
+</span></span><span style="display:flex;"><span>                seasonal_order<span style="color:#666">=</span>(<span style="color:#40a070">0</span>, <span style="color:#40a070">1</span>, <span style="color:#40a070">1</span>, <span style="color:#40a070">12</span>),
+</span></span><span style="display:flex;"><span>                enforce_stationarity<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">False</span>,
+</span></span><span style="display:flex;"><span>                enforce_invertibility<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">False</span>,
+</span></span><span style="display:flex;"><span>                )
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>model_fit <span style="color:#666">=</span> model<span style="color:#666">.</span>fit(disp<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">False</span>)
+</span></span><span style="display:flex;"><span>forecast <span style="color:#666">=</span> model_fit<span style="color:#666">.</span>forecast(steps<span style="color:#666">=</span><span style="color:#007020">len</span>(test))
+</span></span><span style="display:flex;"><span>rmspe <span style="color:#666">=</span> np<span style="color:#666">.</span>sqrt(mean_squared_error(test, forecast))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>figure(figsize<span style="color:#666">=</span>(<span style="color:#40a070">25</span>, <span style="color:#40a070">10</span>))
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>plot(train, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Training Data&#39;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>plot(test<span style="color:#666">.</span>index, forecast, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;red&#39;</span>, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Predicted&#39;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>plot(test<span style="color:#666">.</span>index, test, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;green&#39;</span>, linestyle<span style="color:#666">=</span><span style="color:#4070a0">&#39;dashed&#39;</span>, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Actual&#39;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>title(<span style="color:#4070a0">&#39;SARIMA Model Forecast vs Actuals&#39;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">20</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>legend(loc<span style="color:#666">=</span><span style="color:#4070a0">&#39;best&#39;</span>, prop<span style="color:#666">=</span>{<span style="color:#4070a0">&#39;size&#39;</span>: <span style="color:#40a070">14</span>})
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>grid(<span style="color:#007020;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>annotate(<span style="color:#4070a0">f</span><span style="color:#4070a0">&#39;RMSPE: </span><span style="color:#70a0d0">{</span>rmspe<span style="color:#70a0d0">:</span><span style="color:#4070a0">.3f</span><span style="color:#70a0d0">}</span><span style="color:#4070a0">&#39;</span>, xy<span style="color:#666">=</span>(<span style="color:#40a070">0.75</span>, <span style="color:#40a070">0.95</span>), xycoords<span style="color:#666">=</span><span style="color:#4070a0">&#39;axes fraction&#39;</span>,
+</span></span><span style="display:flex;"><span>             fontsize<span style="color:#666">=</span><span style="color:#40a070">12</span>, bbox<span style="color:#666">=</span><span style="color:#007020">dict</span>(boxstyle<span style="color:#666">=</span><span style="color:#4070a0">&#34;round,pad=0.3&#34;</span>, edgecolor<span style="color:#666">=</span><span style="color:#4070a0">&#34;black&#34;</span>, facecolor<span style="color:#666">=</span><span style="color:#4070a0">&#34;aliceblue&#34;</span>))
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>yticks(fontsize<span style="color:#666">=</span><span style="color:#40a070">14</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>show()
+</span></span></code></pre></div><p><img src="/inflation_forecasting/output_40_0.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>results_df <span style="color:#666">=</span> pd<span style="color:#666">.</span>DataFrame({
+</span></span><span style="display:flex;"><span>    <span style="color:#4070a0">&#39;Actual&#39;</span>: test,
+</span></span><span style="display:flex;"><span>    <span style="color:#4070a0">&#39;Predicted&#39;</span>: forecast
+</span></span><span style="display:flex;"><span>})
+</span></span><span style="display:flex;"><span>results_df
+</span></span></code></pre></div><div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+<pre><code>.dataframe tbody tr th {
+    vertical-align: top;
+}
+
+.dataframe thead th {
+    text-align: right;
+}
+</code></pre>
+<p></style></p>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Actual</th>
+      <th>Predicted</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>2012-08-01</th>
+      <td>0.000000</td>
+      <td>-0.221922</td>
+    </tr>
+    <tr>
+      <th>2012-09-01</th>
+      <td>0.296736</td>
+      <td>0.105661</td>
+    </tr>
+    <tr>
+      <th>2012-10-01</th>
+      <td>0.098619</td>
+      <td>0.299608</td>
+    </tr>
+    <tr>
+      <th>2012-11-01</th>
+      <td>-0.295567</td>
+      <td>0.008456</td>
+    </tr>
+    <tr>
+      <th>2012-12-01</th>
+      <td>-0.197628</td>
+      <td>-0.197302</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>2022-11-01</th>
+      <td>0.000000</td>
+      <td>-0.130700</td>
+    </tr>
+    <tr>
+      <th>2022-12-01</th>
+      <td>-0.223070</td>
+      <td>-0.291318</td>
+    </tr>
+    <tr>
+      <th>2023-01-01</th>
+      <td>0.601915</td>
+      <td>-0.483904</td>
+    </tr>
+    <tr>
+      <th>2023-02-01</th>
+      <td>0.746467</td>
+      <td>0.105862</td>
+    </tr>
+    <tr>
+      <th>2023-03-01</th>
+      <td>0.153655</td>
+      <td>0.180592</td>
+    </tr>
+  </tbody>
+</table>
+<p>128 rows × 2 columns</p>
+</div>
+<h3 id="further-analysis-of-models">Further analysis of models:</h3>
+<h4 id="forecasting-arima">Forecasting ARIMA:</h4>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">def</span> <span style="color:#06287e">forecast_arima</span>(series, order<span style="color:#666">=</span>(<span style="color:#40a070">0</span>, <span style="color:#40a070">0</span>, <span style="color:#40a070">0</span>)):    
+</span></span><span style="display:flex;"><span>    model <span style="color:#666">=</span> ARIMA(series, order<span style="color:#666">=</span>order)
+</span></span><span style="display:flex;"><span>    model_fit <span style="color:#666">=</span> model<span style="color:#666">.</span>fit()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    yhat <span style="color:#666">=</span> model_fit<span style="color:#666">.</span>predict(start<span style="color:#666">=</span><span style="color:#40a070">0</span>, end<span style="color:#666">=</span><span style="color:#007020">len</span>(series)<span style="color:#666">-</span><span style="color:#40a070">1</span>, typ<span style="color:#666">=</span><span style="color:#4070a0">&#39;levels&#39;</span>)<span style="color:#666">.</span>rename(<span style="color:#4070a0">&#39;Predict&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>figure(figsize<span style="color:#666">=</span>(<span style="color:#40a070">24</span>, <span style="color:#40a070">10</span>))
+</span></span><span style="display:flex;"><span>    series<span style="color:#666">.</span>plot(legend<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Actual&#39;</span>, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;gray&#39;</span>)
+</span></span><span style="display:flex;"><span>    yhat<span style="color:#666">.</span>plot(legend<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Predicted&#39;</span>, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;yellow&#39;</span>)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>title(<span style="color:#4070a0">&#39;Predict vs Actual Rates&#39;</span>)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>legend()
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>show()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>forecast_arima(Switzerland_sample[<span style="color:#4070a0">&#34;Monthly Inflation Rate&#34;</span>], order<span style="color:#666">=</span>(<span style="color:#40a070">4</span>, <span style="color:#40a070">1</span>, <span style="color:#40a070">4</span>))
+</span></span></code></pre></div><p><img src="/inflation_forecasting/output_43_0.png" alt="png"></p>
+<h4 id="forecasting-with-sarima">Forecasting with SARIMA:</h4>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">def</span> <span style="color:#06287e">forecast_sarimax</span>(series, order<span style="color:#666">=</span>(<span style="color:#40a070">0</span>, <span style="color:#40a070">0</span>, <span style="color:#40a070">0</span>), seasonal_order<span style="color:#666">=</span>(<span style="color:#40a070">0</span>, <span style="color:#40a070">0</span>, <span style="color:#40a070">0</span>, <span style="color:#40a070">0</span>)):
+</span></span><span style="display:flex;"><span>    sarimax_model <span style="color:#666">=</span> SARIMAX(series, order<span style="color:#666">=</span>order, seasonal_order<span style="color:#666">=</span>seasonal_order)
+</span></span><span style="display:flex;"><span>    model_fitted <span style="color:#666">=</span> sarimax_model<span style="color:#666">.</span>fit(disp<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">False</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    yhat <span style="color:#666">=</span> model_fitted<span style="color:#666">.</span>predict(start<span style="color:#666">=</span><span style="color:#40a070">0</span>, end<span style="color:#666">=</span><span style="color:#007020">len</span>(series) <span style="color:#666">-</span> <span style="color:#40a070">1</span>, typ<span style="color:#666">=</span><span style="color:#4070a0">&#39;levels&#39;</span>)<span style="color:#666">.</span>rename(<span style="color:#4070a0">&#39;Predict&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>figure(figsize<span style="color:#666">=</span>(<span style="color:#40a070">24</span>, <span style="color:#40a070">10</span>))
+</span></span><span style="display:flex;"><span>    series<span style="color:#666">.</span>plot(legend<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Actual&#39;</span>, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;gray&#39;</span>)
+</span></span><span style="display:flex;"><span>    yhat<span style="color:#666">.</span>plot(legend<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Predicted&#39;</span>, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;green&#39;</span>)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>title(<span style="color:#4070a0">&#39;Predict vs Actual Rates&#39;</span>)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>legend()
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>show()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>forecast_sarimax(Switzerland_sample[<span style="color:#4070a0">&#34;Monthly Inflation Rate&#34;</span>], 
+</span></span><span style="display:flex;"><span>                 order<span style="color:#666">=</span>(<span style="color:#40a070">1</span>,<span style="color:#40a070">1</span>,<span style="color:#40a070">3</span>),
+</span></span><span style="display:flex;"><span>                 seasonal_order<span style="color:#666">=</span>(<span style="color:#40a070">1</span>, <span style="color:#40a070">1</span>, <span style="color:#40a070">1</span>, <span style="color:#40a070">6</span>))
+</span></span></code></pre></div><p><img src="/inflation_forecasting/output_45_0.png" alt="png"></p>
+<h3 id="generate-forecasting-for-the-next-5-years">Generate Forecasting for the next 5 Years:</h3>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>data <span style="color:#666">=</span> pd<span style="color:#666">.</span>read_csv(<span style="color:#4070a0">&#34;Monthly Inflation Rate&#34;</span>)
+</span></span><span style="display:flex;"><span>data[<span style="color:#4070a0">&#39;Date&#39;</span>] <span style="color:#666">=</span> pd<span style="color:#666">.</span>to_datetime(data[<span style="color:#4070a0">&#39;Date&#39;</span>])
+</span></span><span style="display:flex;"><span>data<span style="color:#666">.</span>set_index(<span style="color:#4070a0">&#39;Date&#39;</span>, inplace<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>model <span style="color:#666">=</span>auto_arima(data[<span style="color:#4070a0">&#34;Monthly Inflation Rate&#34;</span>],
+</span></span><span style="display:flex;"><span>                  start_p<span style="color:#666">=</span><span style="color:#40a070">1</span>,
+</span></span><span style="display:flex;"><span>                  start_q<span style="color:#666">=</span><span style="color:#40a070">1</span>,
+</span></span><span style="display:flex;"><span>                  max_p<span style="color:#666">=</span><span style="color:#40a070">8</span>,
+</span></span><span style="display:flex;"><span>                  max_q<span style="color:#666">=</span><span style="color:#40a070">8</span>,
+</span></span><span style="display:flex;"><span>                  start_P<span style="color:#666">=</span><span style="color:#40a070">0</span>,
+</span></span><span style="display:flex;"><span>                  start_Q<span style="color:#666">=</span><span style="color:#40a070">0</span>,
+</span></span><span style="display:flex;"><span>                  max_P<span style="color:#666">=</span><span style="color:#40a070">8</span>,
+</span></span><span style="display:flex;"><span>                  max_Q<span style="color:#666">=</span><span style="color:#40a070">8</span>,
+</span></span><span style="display:flex;"><span>                  m<span style="color:#666">=</span><span style="color:#40a070">12</span>,
+</span></span><span style="display:flex;"><span>                  seasonal<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>,
+</span></span><span style="display:flex;"><span>                  trace<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>,
+</span></span><span style="display:flex;"><span>                  d<span style="color:#666">=</span><span style="color:#40a070">1</span>,
+</span></span><span style="display:flex;"><span>                  D<span style="color:#666">=</span><span style="color:#40a070">1</span>,
+</span></span><span style="display:flex;"><span>                  error_action<span style="color:#666">=</span><span style="color:#4070a0">&#39;warn&#39;</span>,
+</span></span><span style="display:flex;"><span>                  suppress_warnings<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>,
+</span></span><span style="display:flex;"><span>                  random_state <span style="color:#666">=</span> <span style="color:#40a070">222</span>,
+</span></span><span style="display:flex;"><span>                  n_fits<span style="color:#666">=</span><span style="color:#40a070">200</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020">print</span>(model<span style="color:#666">.</span>summary())
+</span></span></code></pre></div><pre><code>Performing stepwise search to minimize aic
+ ARIMA(1,1,1)(0,1,0)[12]             : AIC=inf, Time=0.27 sec
+ ARIMA(0,1,0)(0,1,0)[12]             : AIC=818.935, Time=0.04 sec
+ ARIMA(1,1,0)(1,1,0)[12]             : AIC=561.232, Time=0.21 sec
+ ARIMA(0,1,1)(0,1,1)[12]             : AIC=347.859, Time=0.39 sec
+ ARIMA(0,1,1)(0,1,0)[12]             : AIC=inf, Time=0.23 sec
+ ARIMA(0,1,1)(1,1,1)[12]             : AIC=338.815, Time=0.69 sec
+ ARIMA(0,1,1)(1,1,0)[12]             : AIC=427.919, Time=0.21 sec
+ ARIMA(0,1,1)(2,1,1)[12]             : AIC=339.446, Time=2.00 sec
+ ARIMA(0,1,1)(1,1,2)[12]             : AIC=inf, Time=2.77 sec
+ ARIMA(0,1,1)(0,1,2)[12]             : AIC=340.214, Time=1.30 sec
+ ARIMA(0,1,1)(2,1,0)[12]             : AIC=379.938, Time=0.69 sec
+ ARIMA(0,1,1)(2,1,2)[12]             : AIC=342.791, Time=2.11 sec
+ ARIMA(0,1,0)(1,1,1)[12]             : AIC=627.173, Time=0.40 sec
+ ARIMA(1,1,1)(1,1,1)[12]             : AIC=330.780, Time=1.03 sec
+ ARIMA(1,1,1)(0,1,1)[12]             : AIC=342.710, Time=0.53 sec
+ ARIMA(1,1,1)(1,1,0)[12]             : AIC=422.793, Time=0.40 sec
+ ARIMA(1,1,1)(2,1,1)[12]             : AIC=331.941, Time=4.00 sec
+ ARIMA(1,1,1)(1,1,2)[12]             : AIC=inf, Time=3.96 sec
+ ARIMA(1,1,1)(0,1,2)[12]             : AIC=332.372, Time=1.78 sec
+ ARIMA(1,1,1)(2,1,0)[12]             : AIC=375.191, Time=0.96 sec
+ ARIMA(1,1,1)(2,1,2)[12]             : AIC=334.780, Time=3.62 sec
+ ARIMA(1,1,0)(1,1,1)[12]             : AIC=474.992, Time=0.38 sec
+ ARIMA(2,1,1)(1,1,1)[12]             : AIC=inf, Time=1.84 sec
+ ARIMA(1,1,2)(1,1,1)[12]             : AIC=337.948, Time=2.22 sec
+ ARIMA(0,1,2)(1,1,1)[12]             : AIC=332.736, Time=0.89 sec
+ ARIMA(2,1,0)(1,1,1)[12]             : AIC=459.315, Time=0.58 sec
+ ARIMA(2,1,2)(1,1,1)[12]             : AIC=315.711, Time=2.06 sec
+ ARIMA(2,1,2)(0,1,1)[12]             : AIC=324.917, Time=1.24 sec
+ ARIMA(2,1,2)(1,1,0)[12]             : AIC=inf, Time=2.04 sec
+ ARIMA(2,1,2)(2,1,1)[12]             : AIC=316.615, Time=5.25 sec
+ ARIMA(2,1,2)(1,1,2)[12]             : AIC=inf, Time=7.54 sec
+ ARIMA(2,1,2)(0,1,0)[12]             : AIC=inf, Time=0.58 sec
+ ARIMA(2,1,2)(0,1,2)[12]             : AIC=316.987, Time=6.32 sec
+ ARIMA(2,1,2)(2,1,0)[12]             : AIC=362.643, Time=2.27 sec
+ ARIMA(2,1,2)(2,1,2)[12]             : AIC=319.697, Time=6.48 sec
+ ARIMA(3,1,2)(1,1,1)[12]             : AIC=316.117, Time=2.41 sec
+ ARIMA(2,1,3)(1,1,1)[12]             : AIC=316.542, Time=2.81 sec
+ ARIMA(1,1,3)(1,1,1)[12]             : AIC=314.586, Time=1.84 sec
+ ARIMA(1,1,3)(0,1,1)[12]             : AIC=324.446, Time=0.95 sec
+ ARIMA(1,1,3)(1,1,0)[12]             : AIC=411.107, Time=0.76 sec
+ ARIMA(1,1,3)(2,1,1)[12]             : AIC=315.638, Time=5.87 sec
+ ARIMA(1,1,3)(1,1,2)[12]             : AIC=inf, Time=8.27 sec
+ ARIMA(1,1,3)(0,1,0)[12]             : AIC=inf, Time=0.52 sec
+ ARIMA(1,1,3)(0,1,2)[12]             : AIC=315.888, Time=3.15 sec
+ ARIMA(1,1,3)(2,1,0)[12]             : AIC=361.869, Time=1.18 sec
+ ARIMA(1,1,3)(2,1,2)[12]             : AIC=318.582, Time=5.43 sec
+ ARIMA(0,1,3)(1,1,1)[12]             : AIC=324.341, Time=2.38 sec
+ ARIMA(1,1,4)(1,1,1)[12]             : AIC=316.536, Time=2.85 sec
+ ARIMA(0,1,4)(1,1,1)[12]             : AIC=323.005, Time=3.31 sec
+ ARIMA(2,1,4)(1,1,1)[12]             : AIC=318.585, Time=2.21 sec
+ ARIMA(1,1,3)(1,1,1)[12] intercept   : AIC=316.478, Time=2.85 sec
+
+Best model:  ARIMA(1,1,3)(1,1,1)[12]          
+Total fit time: 114.130 seconds
+                                      SARIMAX Results                                       
+============================================================================================
+Dep. Variable:                                    y   No. Observations:                  637
+Model:             SARIMAX(1, 1, 3)x(1, 1, [1], 12)   Log Likelihood                -150.293
+Date:                              Mon, 13 Nov 2023   AIC                            314.586
+Time:                                      14:58:21   BIC                            345.639
+Sample:                                  03-01-1970   HQIC                           326.653
+                                       - 03-01-2023                                         
+Covariance Type:                                opg                                         
+==============================================================================
+                 coef    std err          z      P&gt;|z|      [0.025      0.975]
+------------------------------------------------------------------------------
+ar.L1         -0.8296      0.070    -11.838      0.000      -0.967      -0.692
+ma.L1          0.0611      0.071      0.856      0.392      -0.079       0.201
+ma.L2         -0.6958      0.067    -10.333      0.000      -0.828      -0.564
+ma.L3         -0.2184      0.037     -5.875      0.000      -0.291      -0.146
+ar.S.L12       0.2222      0.045      4.924      0.000       0.134       0.311
+ma.S.L12      -0.8442      0.030    -27.891      0.000      -0.904      -0.785
+sigma2         0.0928      0.004     24.549      0.000       0.085       0.100
+===================================================================================
+Ljung-Box (L1) (Q):                   0.03   Jarque-Bera (JB):               112.10
+Prob(Q):                              0.86   Prob(JB):                         0.00
+Heteroskedasticity (H):               0.36   Skew:                            -0.08
+Prob(H) (two-sided):                  0.00   Kurtosis:                         5.07
+===================================================================================
+
+Warnings:
+[1] Covariance matrix calculated using the outer product of gradients (complex-step).
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>model <span style="color:#666">=</span> sm<span style="color:#666">.</span>tsa<span style="color:#666">.</span>statespace<span style="color:#666">.</span>SARIMAX(data[<span style="color:#4070a0">&#34;Monthly Inflation Rate&#34;</span>],
+</span></span><span style="display:flex;"><span>                                  order<span style="color:#666">=</span>(<span style="color:#40a070">1</span>,<span style="color:#40a070">1</span>,<span style="color:#40a070">3</span>),
+</span></span><span style="display:flex;"><span>                                  seasonal_order<span style="color:#666">=</span>(<span style="color:#40a070">1</span>, <span style="color:#40a070">1</span>, <span style="color:#40a070">1</span>, <span style="color:#40a070">12</span>),
+</span></span><span style="display:flex;"><span>                                  enforce_stationarity<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>,
+</span></span><span style="display:flex;"><span>                                  enforce_invertibility<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>fit_model <span style="color:#666">=</span> model<span style="color:#666">.</span>fit(disp<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">False</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>forecast <span style="color:#666">=</span> fit_model<span style="color:#666">.</span>get_forecast(steps<span style="color:#666">=</span><span style="color:#40a070">60</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>predicted_mean <span style="color:#666">=</span> forecast<span style="color:#666">.</span>predicted_mean
+</span></span><span style="display:flex;"><span>conf_int <span style="color:#666">=</span> forecast<span style="color:#666">.</span>conf_int()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>predicted_mean, conf_int<span style="color:#666">.</span>head()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>forecast_index <span style="color:#666">=</span> pd<span style="color:#666">.</span>date_range(data<span style="color:#666">.</span>index[<span style="color:#666">-</span><span style="color:#40a070">1</span>], periods<span style="color:#666">=</span><span style="color:#40a070">60</span>, freq<span style="color:#666">=</span><span style="color:#4070a0">&#39;MS&#39;</span>)
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>yearly_predicted_mean <span style="color:#666">=</span> predicted_mean<span style="color:#666">.</span>resample(<span style="color:#4070a0">&#39;Y&#39;</span>)<span style="color:#666">.</span>sum()
+</span></span><span style="display:flex;"><span>yearly_predicted_mean<span style="color:#666">.</span>index <span style="color:#666">=</span> yearly_predicted_mean<span style="color:#666">.</span>index<span style="color:#666">.</span>year
+</span></span><span style="display:flex;"><span>yearly_predicted_mean<span style="color:#666">.</span>index <span style="color:#666">=</span> pd<span style="color:#666">.</span>to_datetime(yearly_predicted_mean<span style="color:#666">.</span>index, <span style="color:#007020">format</span><span style="color:#666">=</span><span style="color:#4070a0">&#39;%Y&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>yearly_conf_int_lower <span style="color:#666">=</span> conf_int[<span style="color:#4070a0">&#39;lower Monthly Inflation Rate&#39;</span>]<span style="color:#666">.</span>resample(<span style="color:#4070a0">&#39;Y&#39;</span>)<span style="color:#666">.</span>sum()
+</span></span><span style="display:flex;"><span>yearly_conf_int_upper <span style="color:#666">=</span> conf_int[<span style="color:#4070a0">&#39;upper Monthly Inflation Rate&#39;</span>]<span style="color:#666">.</span>resample(<span style="color:#4070a0">&#39;Y&#39;</span>)<span style="color:#666">.</span>sum()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>yearly_data <span style="color:#666">=</span> data<span style="color:#666">.</span>resample(<span style="color:#4070a0">&#39;Y&#39;</span>)<span style="color:#666">.</span>sum()
+</span></span><span style="display:flex;"><span>yearly_data<span style="color:#666">.</span>index <span style="color:#666">=</span> yearly_data<span style="color:#666">.</span>index<span style="color:#666">.</span>year
+</span></span><span style="display:flex;"><span>yearly_data<span style="color:#666">.</span>index <span style="color:#666">=</span> pd<span style="color:#666">.</span>to_datetime(yearly_data<span style="color:#666">.</span>index, <span style="color:#007020">format</span><span style="color:#666">=</span><span style="color:#4070a0">&#39;%Y&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>figure(figsize<span style="color:#666">=</span>(<span style="color:#40a070">20</span>, <span style="color:#40a070">7</span>))
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>plot(yearly_data<span style="color:#666">.</span>index, yearly_data[<span style="color:#4070a0">&#39;Monthly Inflation Rate&#39;</span>], label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Historical Data&#39;</span>, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;blue&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>plot(yearly_predicted_mean<span style="color:#666">.</span>index, yearly_predicted_mean, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Yearly Forecast&#39;</span>, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;red&#39;</span>, linestyle<span style="color:#666">=</span><span style="color:#4070a0">&#39;--&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>ax <span style="color:#666">=</span> plt<span style="color:#666">.</span>gca()
+</span></span><span style="display:flex;"><span>ax<span style="color:#666">.</span>xaxis<span style="color:#666">.</span>set_major_locator(mdates<span style="color:#666">.</span>YearLocator(<span style="color:#40a070">2</span>))
+</span></span><span style="display:flex;"><span>ax<span style="color:#666">.</span>xaxis<span style="color:#666">.</span>set_major_formatter(mdates<span style="color:#666">.</span>DateFormatter(<span style="color:#4070a0">&#39;%Y&#39;</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>ymin, ymax <span style="color:#666">=</span> plt<span style="color:#666">.</span>ylim()
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>yticks(np<span style="color:#666">.</span>arange(ymin, ymax, (ymax<span style="color:#666">-</span>ymin)<span style="color:#666">/</span><span style="color:#40a070">20</span>))  
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>ax<span style="color:#666">.</span>tick_params(axis<span style="color:#666">=</span><span style="color:#4070a0">&#39;x&#39;</span>, labelsize<span style="color:#666">=</span><span style="color:#40a070">12</span>)  
+</span></span><span style="display:flex;"><span>ax<span style="color:#666">.</span>tick_params(axis<span style="color:#666">=</span><span style="color:#4070a0">&#39;y&#39;</span>, labelsize<span style="color:#666">=</span><span style="color:#40a070">12</span>)  
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">for</span> date, value <span style="color:#007020;font-weight:bold">in</span> <span style="color:#007020">zip</span>(yearly_data<span style="color:#666">.</span>index, yearly_data[<span style="color:#4070a0">&#39;Monthly Inflation Rate&#39;</span>]):
+</span></span><span style="display:flex;"><span>    ax<span style="color:#666">.</span>annotate(<span style="color:#4070a0">f</span><span style="color:#4070a0">&#39;</span><span style="color:#70a0d0">{</span>value<span style="color:#70a0d0">:</span><span style="color:#4070a0">.2f</span><span style="color:#70a0d0">}</span><span style="color:#4070a0">&#39;</span>, (date, value), textcoords<span style="color:#666">=</span><span style="color:#4070a0">&#34;offset points&#34;</span>, xytext<span style="color:#666">=</span>(<span style="color:#40a070">0</span>,<span style="color:#40a070">5</span>), ha<span style="color:#666">=</span><span style="color:#4070a0">&#39;center&#39;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">10</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">for</span> date, value <span style="color:#007020;font-weight:bold">in</span> <span style="color:#007020">zip</span>(yearly_predicted_mean<span style="color:#666">.</span>index, yearly_predicted_mean):
+</span></span><span style="display:flex;"><span>    ax<span style="color:#666">.</span>annotate(<span style="color:#4070a0">f</span><span style="color:#4070a0">&#39;</span><span style="color:#70a0d0">{</span>value<span style="color:#70a0d0">:</span><span style="color:#4070a0">.2f</span><span style="color:#70a0d0">}</span><span style="color:#4070a0">&#39;</span>, (date, value), textcoords<span style="color:#666">=</span><span style="color:#4070a0">&#34;offset points&#34;</span>, xytext<span style="color:#666">=</span>(<span style="color:#40a070">0</span>,<span style="color:#40a070">5</span>), ha<span style="color:#666">=</span><span style="color:#4070a0">&#39;center&#39;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">10</span>, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;red&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>title(<span style="color:#4070a0">&#39;Yearly Inflation Rate and Forecast for Switzerland (2024-2028) - SARIMAX Model&#39;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">18</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>xlabel(<span style="color:#4070a0">&#39;Date&#39;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">16</span>)  
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>ylabel(<span style="color:#4070a0">&#39;Yearly Inflation Rate (%)&#39;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">16</span>)  
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>legend(fontsize<span style="color:#666">=</span><span style="color:#4070a0">&#39;x-large&#39;</span>) 
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>grid(<span style="color:#007020;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>tight_layout()
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>show()
+</span></span></code></pre></div><p><img src="/inflation_forecasting/output_49_0.png" alt="png"></p>
+<h3 id="how-far-such-model-can-predict-inflation-rate-accurately">How far such model can predict inflation rate accurately?</h3>
+<p>Given the limitation of the uni-variate data we have previously used in forecasting inflation and experimenting with different models, one question came to mind is how far we can forecast inflation from a previous pattern of the data.
+Given the monetary series stochastic nature and the many random factors that influences the change in inflation over the years, it is always better to state with humility the limitation of the data the model.</p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>data <span style="color:#666">=</span> pd<span style="color:#666">.</span>read_csv(<span style="color:#4070a0">&#34;Monthly Inflation Rate&#34;</span>)
+</span></span><span style="display:flex;"><span>data[<span style="color:#4070a0">&#39;Date&#39;</span>] <span style="color:#666">=</span> pd<span style="color:#666">.</span>to_datetime(data[<span style="color:#4070a0">&#39;Date&#39;</span>])
+</span></span><span style="display:flex;"><span>data<span style="color:#666">.</span>set_index(<span style="color:#4070a0">&#39;Date&#39;</span>, inplace<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>)
+</span></span></code></pre></div><h4 id="split-and-prepare-data">Split and prepare data:</h4>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>series <span style="color:#666">=</span> data[<span style="color:#4070a0">&#34;Monthly Inflation Rate&#34;</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>train_end_index <span style="color:#666">=</span> <span style="color:#007020">int</span>(<span style="color:#40a070">0.8</span> <span style="color:#666">*</span> <span style="color:#007020">len</span>(series))
+</span></span><span style="display:flex;"><span>train_data <span style="color:#666">=</span> series<span style="color:#666">.</span>iloc[:train_end_index]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>start_test <span style="color:#666">=</span> train_end_index
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>test_data <span style="color:#666">=</span> []
+</span></span><span style="display:flex;"><span>test_labels <span style="color:#666">=</span> []
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">for</span> i <span style="color:#007020;font-weight:bold">in</span> <span style="color:#007020">range</span>(<span style="color:#40a070">1</span>, <span style="color:#40a070">11</span>):  
+</span></span><span style="display:flex;"><span>    end_test <span style="color:#666">=</span> start_test <span style="color:#666">+</span> <span style="color:#40a070">6</span> <span style="color:#666">*</span> i 
+</span></span><span style="display:flex;"><span>    test_split <span style="color:#666">=</span> series<span style="color:#666">.</span>iloc[train_end_index:end_test]  
+</span></span><span style="display:flex;"><span>    test_data<span style="color:#666">.</span>append(test_split)
+</span></span><span style="display:flex;"><span>    test_labels<span style="color:#666">.</span>append(<span style="color:#4070a0">f</span><span style="color:#4070a0">&#34;</span><span style="color:#70a0d0">{</span>i <span style="color:#666">*</span> <span style="color:#40a070">6</span><span style="color:#70a0d0">}</span><span style="color:#4070a0"> months&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>test_data <span style="color:#666">=</span> test_data[:<span style="color:#40a070">5</span>] <span style="color:#666">+</span> [test_data[<span style="color:#666">-</span><span style="color:#40a070">3</span>], test_data[<span style="color:#666">-</span><span style="color:#40a070">2</span>], test_data[<span style="color:#666">-</span><span style="color:#40a070">1</span>]]
+</span></span><span style="display:flex;"><span>test_labels <span style="color:#666">=</span> test_labels[:<span style="color:#40a070">5</span>] <span style="color:#666">+</span> [test_labels[<span style="color:#666">-</span><span style="color:#40a070">3</span>], test_labels[<span style="color:#666">-</span><span style="color:#40a070">2</span>], test_labels[<span style="color:#666">-</span><span style="color:#40a070">1</span>]]
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>predictions <span style="color:#666">=</span> []
+</span></span><span style="display:flex;"><span>rmses <span style="color:#666">=</span> []
+</span></span><span style="display:flex;"><span>results <span style="color:#666">=</span> []
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">for</span> i, test <span style="color:#007020;font-weight:bold">in</span> <span style="color:#007020">enumerate</span>(test_data):
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    model_ <span style="color:#666">=</span> ARIMA(train_data,
+</span></span><span style="display:flex;"><span>                   order<span style="color:#666">=</span>(<span style="color:#40a070">4</span>, <span style="color:#40a070">1</span>, <span style="color:#40a070">4</span>),
+</span></span><span style="display:flex;"><span>                   )
+</span></span><span style="display:flex;"><span>    fit_model <span style="color:#666">=</span> model_<span style="color:#666">.</span>fit()
+</span></span><span style="display:flex;"><span>    forecast <span style="color:#666">=</span> fit_model<span style="color:#666">.</span>forecast(steps<span style="color:#666">=</span><span style="color:#007020">len</span>(test))
+</span></span><span style="display:flex;"><span>    predictions<span style="color:#666">.</span>append(forecast)
+</span></span><span style="display:flex;"><span>    rmse <span style="color:#666">=</span> np<span style="color:#666">.</span>sqrt(mean_squared_error(test, forecast))
+</span></span><span style="display:flex;"><span>    rmses<span style="color:#666">.</span>append(rmse)
+</span></span><span style="display:flex;"><span>    <span style="color:#007020">print</span>(<span style="color:#4070a0">f</span><span style="color:#4070a0">&#39;RMSE for </span><span style="color:#70a0d0">{</span>test_labels[i]<span style="color:#70a0d0">}</span><span style="color:#4070a0"> test set: </span><span style="color:#70a0d0">{</span>rmse<span style="color:#70a0d0">:</span><span style="color:#4070a0">.2f</span><span style="color:#70a0d0">}</span><span style="color:#4070a0">&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    fig, ax <span style="color:#666">=</span> plt<span style="color:#666">.</span>subplots(<span style="color:#40a070">1</span>, <span style="color:#40a070">2</span>, figsize<span style="color:#666">=</span>(<span style="color:#40a070">20</span>,<span style="color:#40a070">7</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    font_size_axis <span style="color:#666">=</span> <span style="color:#40a070">14</span>
+</span></span><span style="display:flex;"><span>    ax[<span style="color:#40a070">0</span>]<span style="color:#666">.</span>tick_params(axis<span style="color:#666">=</span><span style="color:#4070a0">&#39;both&#39;</span>, labelsize<span style="color:#666">=</span>font_size_axis)
+</span></span><span style="display:flex;"><span>    ax[<span style="color:#40a070">1</span>]<span style="color:#666">.</span>tick_params(axis<span style="color:#666">=</span><span style="color:#4070a0">&#39;both&#39;</span>, labelsize<span style="color:#666">=</span>font_size_axis)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    ax[<span style="color:#40a070">0</span>]<span style="color:#666">.</span>plot(series<span style="color:#666">.</span>index[:train_end_index <span style="color:#666">+</span> <span style="color:#007020">len</span>(forecast)], series<span style="color:#666">.</span>values[:train_end_index <span style="color:#666">+</span> <span style="color:#007020">len</span>(forecast)], label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Original Series&#39;</span>, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;blue&#39;</span>)
+</span></span><span style="display:flex;"><span>    fitted_indices <span style="color:#666">=</span> series<span style="color:#666">.</span>index[train_end_index <span style="color:#666">-</span> <span style="color:#007020">len</span>(fit_model<span style="color:#666">.</span>fittedvalues):train_end_index]
+</span></span><span style="display:flex;"><span>    ax[<span style="color:#40a070">0</span>]<span style="color:#666">.</span>plot(fitted_indices, fit_model<span style="color:#666">.</span>fittedvalues, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;red&#39;</span>, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Fitted Values&#39;</span>)
+</span></span><span style="display:flex;"><span>    forecast_index <span style="color:#666">=</span> <span style="color:#007020">range</span>(train_end_index, train_end_index <span style="color:#666">+</span> <span style="color:#007020">len</span>(forecast))
+</span></span><span style="display:flex;"><span>    ax[<span style="color:#40a070">0</span>]<span style="color:#666">.</span>plot(series<span style="color:#666">.</span>index[forecast_index], forecast, label<span style="color:#666">=</span><span style="color:#4070a0">f</span><span style="color:#4070a0">&#39;Forecast </span><span style="color:#70a0d0">{</span>test_labels[i]<span style="color:#70a0d0">}</span><span style="color:#4070a0">&#39;</span>, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;green&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    font_size_legend <span style="color:#666">=</span> <span style="color:#40a070">12</span>
+</span></span><span style="display:flex;"><span>    font_size_title <span style="color:#666">=</span> <span style="color:#40a070">16</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    ax[<span style="color:#40a070">0</span>]<span style="color:#666">.</span>legend(fontsize<span style="color:#666">=</span>font_size_legend)
+</span></span><span style="display:flex;"><span>    ax[<span style="color:#40a070">0</span>]<span style="color:#666">.</span>set_title(<span style="color:#4070a0">f</span><span style="color:#4070a0">&#39;SARIMA Model Forecast for </span><span style="color:#70a0d0">{</span>test_labels[i]<span style="color:#70a0d0">}</span><span style="color:#4070a0"> Test Set - RMSE: </span><span style="color:#70a0d0">{</span>rmse<span style="color:#70a0d0">:</span><span style="color:#4070a0">.2f</span><span style="color:#70a0d0">}</span><span style="color:#4070a0">&#39;</span>, fontsize<span style="color:#666">=</span>font_size_title)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    ax[<span style="color:#40a070">1</span>]<span style="color:#666">.</span>plot(series<span style="color:#666">.</span>index[forecast_index], test, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;True Values&#39;</span>, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;blue&#39;</span>)
+</span></span><span style="display:flex;"><span>    ax[<span style="color:#40a070">1</span>]<span style="color:#666">.</span>plot(series<span style="color:#666">.</span>index[forecast_index], forecast, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Predicted Values&#39;</span>, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;green&#39;</span>)
+</span></span><span style="display:flex;"><span>    test_length_years <span style="color:#666">=</span> format_year(<span style="color:#007020">len</span>(test) <span style="color:#666">/</span> <span style="color:#40a070">12.0</span>)
+</span></span><span style="display:flex;"><span>    ax[<span style="color:#40a070">1</span>]<span style="color:#666">.</span>set_title(<span style="color:#4070a0">f</span><span style="color:#4070a0">&#39;True vs Predicted Values for </span><span style="color:#70a0d0">{</span>test_labels[i]<span style="color:#70a0d0">}</span><span style="color:#4070a0"> Test Set (</span><span style="color:#70a0d0">{</span>test_length_years<span style="color:#70a0d0">}</span><span style="color:#4070a0"> years)&#39;</span>, fontsize<span style="color:#666">=</span>font_size_title)
+</span></span><span style="display:flex;"><span>    ax[<span style="color:#40a070">1</span>]<span style="color:#666">.</span>legend(fontsize<span style="color:#666">=</span>font_size_legend)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>tight_layout()
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>show()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    df <span style="color:#666">=</span> pd<span style="color:#666">.</span>DataFrame({
+</span></span><span style="display:flex;"><span>        <span style="color:#4070a0">&#39;Date&#39;</span>: series<span style="color:#666">.</span>index[forecast_index],
+</span></span><span style="display:flex;"><span>        <span style="color:#4070a0">&#39;True Values&#39;</span>: test<span style="color:#666">.</span>values,
+</span></span><span style="display:flex;"><span>        <span style="color:#4070a0">&#39;Predicted Values&#39;</span>: forecast,
+</span></span><span style="display:flex;"><span>        <span style="color:#4070a0">&#39;Forecasting in Months&#39;</span>:test_labels[i],
+</span></span><span style="display:flex;"><span>        <span style="color:#4070a0">&#39;Test Set Label&#39;</span>:i,
+</span></span><span style="display:flex;"><span>        <span style="color:#4070a0">&#39;Years&#39;</span>: test_length_years
+</span></span><span style="display:flex;"><span>    })
+</span></span><span style="display:flex;"><span>    results<span style="color:#666">.</span>append(df)
+</span></span></code></pre></div><pre><code>RMSE for 6 months test set: 0.12
+</code></pre>
+<p><img src="/inflation_forecasting/output_54_1.png" alt="png"></p>
+<pre><code>RMSE for 12 months test set: 0.16
+</code></pre>
+<p><img src="/inflation_forecasting/output_54_3.png" alt="png"></p>
+<pre><code>RMSE for 18 months test set: 0.16
+</code></pre>
+<p><img src="/inflation_forecasting/output_54_5.png" alt="png"></p>
+<pre><code>RMSE for 24 months test set: 0.17
+</code></pre>
+<p><img src="/inflation_forecasting/output_54_7.png" alt="png"></p>
+<pre><code>RMSE for 30 months test set: 0.17
+</code></pre>
+<p><img src="/inflation_forecasting/output_54_9.png" alt="png"></p>
+<pre><code>RMSE for 48 months test set: 0.21
+</code></pre>
+<p><img src="/inflation_forecasting/output_54_11.png" alt="png"></p>
+<pre><code>RMSE for 54 months test set: 0.20
+</code></pre>
+<p><img src="/inflation_forecasting/output_54_13.png" alt="png"></p>
+<pre><code>RMSE for 60 months test set: 0.20
+</code></pre>
+<p><img src="/inflation_forecasting/output_54_15.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>predictions <span style="color:#666">=</span> []
+</span></span><span style="display:flex;"><span>rmses <span style="color:#666">=</span> []
+</span></span><span style="display:flex;"><span>results <span style="color:#666">=</span> []
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">for</span> i, test <span style="color:#007020;font-weight:bold">in</span> <span style="color:#007020">enumerate</span>(test_data):
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    model_ <span style="color:#666">=</span> sm<span style="color:#666">.</span>tsa<span style="color:#666">.</span>statespace<span style="color:#666">.</span>SARIMAX(train_data,
+</span></span><span style="display:flex;"><span>                                       order<span style="color:#666">=</span>(<span style="color:#40a070">1</span>,<span style="color:#40a070">1</span>,<span style="color:#40a070">3</span>),
+</span></span><span style="display:flex;"><span>                                       seasonal_order<span style="color:#666">=</span>(<span style="color:#40a070">2</span>, <span style="color:#40a070">0</span>, <span style="color:#40a070">1</span>, <span style="color:#40a070">12</span>),
+</span></span><span style="display:flex;"><span>                                       enforce_stationarity<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>,
+</span></span><span style="display:flex;"><span>                                       enforce_invertibility<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    fit_model <span style="color:#666">=</span> model_<span style="color:#666">.</span>fit(optimized<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>, use_brute<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>,disp<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">False</span>)
+</span></span><span style="display:flex;"><span>    forecast <span style="color:#666">=</span> fit_model<span style="color:#666">.</span>forecast(steps<span style="color:#666">=</span><span style="color:#007020">len</span>(test))
+</span></span><span style="display:flex;"><span>    predictions<span style="color:#666">.</span>append(forecast)
+</span></span><span style="display:flex;"><span>    rmse <span style="color:#666">=</span> np<span style="color:#666">.</span>sqrt(mean_squared_error(test, forecast))
+</span></span><span style="display:flex;"><span>    rmses<span style="color:#666">.</span>append(rmse)
+</span></span><span style="display:flex;"><span>    <span style="color:#007020">print</span>(<span style="color:#4070a0">f</span><span style="color:#4070a0">&#39;RMSE for </span><span style="color:#70a0d0">{</span>test_labels[i]<span style="color:#70a0d0">}</span><span style="color:#4070a0"> test set: </span><span style="color:#70a0d0">{</span>rmse<span style="color:#70a0d0">:</span><span style="color:#4070a0">.2f</span><span style="color:#70a0d0">}</span><span style="color:#4070a0">&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    fig, ax <span style="color:#666">=</span> plt<span style="color:#666">.</span>subplots(<span style="color:#40a070">1</span>, <span style="color:#40a070">2</span>, figsize<span style="color:#666">=</span>(<span style="color:#40a070">20</span>,<span style="color:#40a070">7</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    font_size_axis <span style="color:#666">=</span> <span style="color:#40a070">14</span>
+</span></span><span style="display:flex;"><span>    ax[<span style="color:#40a070">0</span>]<span style="color:#666">.</span>tick_params(axis<span style="color:#666">=</span><span style="color:#4070a0">&#39;both&#39;</span>, labelsize<span style="color:#666">=</span>font_size_axis)
+</span></span><span style="display:flex;"><span>    ax[<span style="color:#40a070">1</span>]<span style="color:#666">.</span>tick_params(axis<span style="color:#666">=</span><span style="color:#4070a0">&#39;both&#39;</span>, labelsize<span style="color:#666">=</span>font_size_axis)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    ax[<span style="color:#40a070">0</span>]<span style="color:#666">.</span>plot(series<span style="color:#666">.</span>index[:train_end_index <span style="color:#666">+</span> <span style="color:#007020">len</span>(forecast)], series<span style="color:#666">.</span>values[:train_end_index <span style="color:#666">+</span> <span style="color:#007020">len</span>(forecast)], label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Original Series&#39;</span>, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;blue&#39;</span>)
+</span></span><span style="display:flex;"><span>    fitted_indices <span style="color:#666">=</span> series<span style="color:#666">.</span>index[train_end_index <span style="color:#666">-</span> <span style="color:#007020">len</span>(fit_model<span style="color:#666">.</span>fittedvalues):train_end_index]
+</span></span><span style="display:flex;"><span>    ax[<span style="color:#40a070">0</span>]<span style="color:#666">.</span>plot(fitted_indices, fit_model<span style="color:#666">.</span>fittedvalues, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;red&#39;</span>, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Fitted Values&#39;</span>)
+</span></span><span style="display:flex;"><span>    forecast_index <span style="color:#666">=</span> <span style="color:#007020">range</span>(train_end_index, train_end_index <span style="color:#666">+</span> <span style="color:#007020">len</span>(forecast))
+</span></span><span style="display:flex;"><span>    ax[<span style="color:#40a070">0</span>]<span style="color:#666">.</span>plot(series<span style="color:#666">.</span>index[forecast_index], forecast, label<span style="color:#666">=</span><span style="color:#4070a0">f</span><span style="color:#4070a0">&#39;Forecast </span><span style="color:#70a0d0">{</span>test_labels[i]<span style="color:#70a0d0">}</span><span style="color:#4070a0">&#39;</span>, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;yellow&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    font_size_legend <span style="color:#666">=</span> <span style="color:#40a070">12</span>
+</span></span><span style="display:flex;"><span>    font_size_title <span style="color:#666">=</span> <span style="color:#40a070">16</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    ax[<span style="color:#40a070">0</span>]<span style="color:#666">.</span>legend(fontsize<span style="color:#666">=</span>font_size_legend)
+</span></span><span style="display:flex;"><span>    ax[<span style="color:#40a070">0</span>]<span style="color:#666">.</span>set_title(<span style="color:#4070a0">f</span><span style="color:#4070a0">&#39;SARIMA Model Forecast for </span><span style="color:#70a0d0">{</span>test_labels[i]<span style="color:#70a0d0">}</span><span style="color:#4070a0"> Test Set - RMSE: </span><span style="color:#70a0d0">{</span>rmse<span style="color:#70a0d0">:</span><span style="color:#4070a0">.2f</span><span style="color:#70a0d0">}</span><span style="color:#4070a0">&#39;</span>, fontsize<span style="color:#666">=</span>font_size_title)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    ax[<span style="color:#40a070">1</span>]<span style="color:#666">.</span>plot(series<span style="color:#666">.</span>index[forecast_index], test, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;True Values&#39;</span>, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;blue&#39;</span>)
+</span></span><span style="display:flex;"><span>    ax[<span style="color:#40a070">1</span>]<span style="color:#666">.</span>plot(series<span style="color:#666">.</span>index[forecast_index], forecast, label<span style="color:#666">=</span><span style="color:#4070a0">&#39;Predicted Values&#39;</span>, color<span style="color:#666">=</span><span style="color:#4070a0">&#39;yellow&#39;</span>)
+</span></span><span style="display:flex;"><span>    test_length_years <span style="color:#666">=</span> format_year(<span style="color:#007020">len</span>(test) <span style="color:#666">/</span> <span style="color:#40a070">12.0</span>)
+</span></span><span style="display:flex;"><span>    ax[<span style="color:#40a070">1</span>]<span style="color:#666">.</span>set_title(<span style="color:#4070a0">f</span><span style="color:#4070a0">&#39;True vs Predicted Values for </span><span style="color:#70a0d0">{</span>test_labels[i]<span style="color:#70a0d0">}</span><span style="color:#4070a0"> Test Set (</span><span style="color:#70a0d0">{</span>test_length_years<span style="color:#70a0d0">}</span><span style="color:#4070a0"> years)&#39;</span>, fontsize<span style="color:#666">=</span>font_size_title)
+</span></span><span style="display:flex;"><span>    ax[<span style="color:#40a070">1</span>]<span style="color:#666">.</span>legend(fontsize<span style="color:#666">=</span>font_size_legend)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>tight_layout()
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>show()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    df <span style="color:#666">=</span> pd<span style="color:#666">.</span>DataFrame({
+</span></span><span style="display:flex;"><span>        <span style="color:#4070a0">&#39;Date&#39;</span>: series<span style="color:#666">.</span>index[forecast_index],
+</span></span><span style="display:flex;"><span>        <span style="color:#4070a0">&#39;True Values&#39;</span>: test<span style="color:#666">.</span>values,
+</span></span><span style="display:flex;"><span>        <span style="color:#4070a0">&#39;Predicted Values&#39;</span>: forecast,
+</span></span><span style="display:flex;"><span>        <span style="color:#4070a0">&#39;Forecasting in Months&#39;</span>:test_labels[i],
+</span></span><span style="display:flex;"><span>        <span style="color:#4070a0">&#39;Test Set Label&#39;</span>:i,
+</span></span><span style="display:flex;"><span>        <span style="color:#4070a0">&#39;Years&#39;</span>: test_length_years
+</span></span><span style="display:flex;"><span>    })
+</span></span><span style="display:flex;"><span>    results<span style="color:#666">.</span>append(df)
+</span></span></code></pre></div><pre><code>RMSE for 6 months test set: 0.15
+</code></pre>
+<p><img src="/inflation_forecasting/output_55_1.png" alt="png"></p>
+<pre><code>RMSE for 12 months test set: 0.15
+</code></pre>
+<p><img src="/inflation_forecasting/output_55_3.png" alt="png"></p>
+<pre><code>RMSE for 18 months test set: 0.15
+</code></pre>
+<p><img src="/inflation_forecasting/output_55_5.png" alt="png"></p>
+<pre><code>RMSE for 24 months test set: 0.15
+</code></pre>
+<p><img src="/inflation_forecasting/output_55_7.png" alt="png"></p>
+<pre><code>RMSE for 30 months test set: 0.16
+</code></pre>
+<p><img src="/inflation_forecasting/output_55_9.png" alt="png"></p>
+<pre><code>RMSE for 48 months test set: 0.18
+</code></pre>
+<p><img src="/inflation_forecasting/output_55_11.png" alt="png"></p>
+<pre><code>RMSE for 54 months test set: 0.17
+</code></pre>
+<p><img src="/inflation_forecasting/output_55_13.png" alt="png"></p>
+<pre><code>RMSE for 60 months test set: 0.18
+</code></pre>
+<p><img src="/inflation_forecasting/output_55_15.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>final_results <span style="color:#666">=</span> pd<span style="color:#666">.</span>concat(results, axis<span style="color:#666">=</span><span style="color:#40a070">0</span>)
+</span></span><span style="display:flex;"><span>final_results<span style="color:#666">.</span>reset_index(drop<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>, inplace<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>final_results<span style="color:#666">.</span>set_index(<span style="color:#4070a0">&#34;Date&#34;</span>,inplace<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>unique_labels <span style="color:#666">=</span> final_results[<span style="color:#4070a0">&#39;Years&#39;</span>]<span style="color:#666">.</span>unique()
+</span></span><span style="display:flex;"><span>n_labels <span style="color:#666">=</span> <span style="color:#007020">len</span>(unique_labels)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>n_rows <span style="color:#666">=</span> <span style="color:#007020">int</span>(np<span style="color:#666">.</span>ceil(n_labels <span style="color:#666">/</span> <span style="color:#40a070">3</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>fig, axes <span style="color:#666">=</span> plt<span style="color:#666">.</span>subplots(n_rows, <span style="color:#40a070">3</span>, figsize<span style="color:#666">=</span>(<span style="color:#40a070">15</span>, <span style="color:#40a070">5</span> <span style="color:#666">*</span> n_rows))
+</span></span><span style="display:flex;"><span>fig<span style="color:#666">.</span>suptitle(<span style="color:#4070a0">&#39;True vs Predicted Values for Each Test Set Label&#39;</span>, y<span style="color:#666">=</span><span style="color:#40a070">1.05</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">if</span> n_rows <span style="color:#666">==</span> <span style="color:#40a070">1</span>:
+</span></span><span style="display:flex;"><span>    axes <span style="color:#666">=</span> np<span style="color:#666">.</span>reshape(axes, (<span style="color:#40a070">1</span>, <span style="color:#666">-</span><span style="color:#40a070">1</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">for</span> i, label <span style="color:#007020;font-weight:bold">in</span> <span style="color:#007020">enumerate</span>(unique_labels):
+</span></span><span style="display:flex;"><span>    row, col <span style="color:#666">=</span> <span style="color:#007020">divmod</span>(i, <span style="color:#40a070">3</span>)
+</span></span><span style="display:flex;"><span>    ax <span style="color:#666">=</span> axes[row, col]
+</span></span><span style="display:flex;"><span>    subset <span style="color:#666">=</span> final_results[final_results[<span style="color:#4070a0">&#39;Years&#39;</span>] <span style="color:#666">==</span> label]
+</span></span><span style="display:flex;"><span>    
+</span></span><span style="display:flex;"><span>    mse <span style="color:#666">=</span> mean_squared_error(subset[<span style="color:#4070a0">&#39;True Values&#39;</span>], subset[<span style="color:#4070a0">&#39;Predicted Values&#39;</span>])
+</span></span><span style="display:flex;"><span>    rmse <span style="color:#666">=</span> np<span style="color:#666">.</span>sqrt(mse)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    label_text <span style="color:#666">=</span> <span style="color:#4070a0">f</span><span style="color:#4070a0">&#39;MSE = </span><span style="color:#70a0d0">{</span>mse<span style="color:#70a0d0">:</span><span style="color:#4070a0">.2f</span><span style="color:#70a0d0">}</span><span style="color:#4070a0">, RMSE = </span><span style="color:#70a0d0">{</span>rmse<span style="color:#70a0d0">:</span><span style="color:#4070a0">.2f</span><span style="color:#70a0d0">}</span><span style="color:#4070a0">&#39;</span>
+</span></span><span style="display:flex;"><span>    ax<span style="color:#666">.</span>scatter(subset[<span style="color:#4070a0">&#39;True Values&#39;</span>], subset[<span style="color:#4070a0">&#39;Predicted Values&#39;</span>], color<span style="color:#666">=</span><span style="color:#4070a0">&#39;green&#39;</span>, alpha<span style="color:#666">=</span><span style="color:#40a070">0.6</span>, label<span style="color:#666">=</span>label_text, marker<span style="color:#666">=</span><span style="color:#4070a0">&#39;s&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    ax<span style="color:#666">.</span>plot([<span style="color:#666">-</span><span style="color:#40a070">1</span>, <span style="color:#40a070">1</span>], [<span style="color:#666">-</span><span style="color:#40a070">1</span>, <span style="color:#40a070">1</span>], color<span style="color:#666">=</span><span style="color:#4070a0">&#39;red&#39;</span>, linestyle<span style="color:#666">=</span><span style="color:#4070a0">&#39;--&#39;</span>)
+</span></span><span style="display:flex;"><span>    ax<span style="color:#666">.</span>legend(loc<span style="color:#666">=</span><span style="color:#4070a0">&#39;upper left&#39;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">12</span>)
+</span></span><span style="display:flex;"><span>    ax<span style="color:#666">.</span>set_title(<span style="color:#4070a0">f</span><span style="color:#4070a0">&#34;Years: </span><span style="color:#70a0d0">{</span>label<span style="color:#70a0d0">}</span><span style="color:#4070a0">&#34;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">14</span>)
+</span></span><span style="display:flex;"><span>    ax<span style="color:#666">.</span>set_xlabel(<span style="color:#4070a0">&#39;True Values&#39;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">13</span>)
+</span></span><span style="display:flex;"><span>    ax<span style="color:#666">.</span>set_ylabel(<span style="color:#4070a0">&#39;Predicted Values&#39;</span>, fontsize<span style="color:#666">=</span><span style="color:#40a070">13</span>)
+</span></span><span style="display:flex;"><span>    ax<span style="color:#666">.</span>grid(<span style="color:#007020;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">for</span> j <span style="color:#007020;font-weight:bold">in</span> <span style="color:#007020">range</span>(i<span style="color:#666">+</span><span style="color:#40a070">1</span>, <span style="color:#40a070">3</span> <span style="color:#666">*</span> n_rows):
+</span></span><span style="display:flex;"><span>    row, col <span style="color:#666">=</span> <span style="color:#007020">divmod</span>(j, <span style="color:#40a070">3</span>)
+</span></span><span style="display:flex;"><span>    fig<span style="color:#666">.</span>delaxes(axes[row, col])
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>tight_layout()
+</span></span><span style="display:flex;"><span>plt<span style="color:#666">.</span>show()
+</span></span></code></pre></div><p><img src="/inflation_forecasting/output_56_0.png" alt="png"></p>
+</div>
+    </article>
+  </main>
+
+    </div>
+    <footer>
+  <hr />
+  
+    <p id="social">
+      Find me around the web:
+      <br />
+      
+        
+        <a href="https://github.com/AHMED-ALTAKROURI">GitHub</a>
+      
+         | 
+        <a href="https://twitter.com/ahmedtakrouri">Twitter</a>
+      
+         | 
+        <a href="https://www.linkedin.com/in/ahmed-altakrouri-7422b185/">Linkedin</a>
+      
+    </p>
+  
+  <p class="copyright">
+    Copyright © 2023
+    <a href="https://ahmed-altakrouri.github.io/"><strong>Ahmed Al-takrouri</strong></a>.
+
+
+  </p>
+  <p class="builtWith">
+
+
+
+
+
+
+
+</footer>
+
+  </body>
+</html>

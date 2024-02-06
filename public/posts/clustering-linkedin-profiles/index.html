@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+
+
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta
+    name="description"
+    content=""
+  />
+  
+    
+      <title>NLP/NLU Series: Clustering Linkedin Profiles | AHMED AL-TAKROURI</title>
+    
+  
+  <link rel="stylesheet" href="/css/reset.css"/>
+  <link rel="stylesheet" href="/css/font.css"/>
+  <link rel="stylesheet" href="/css/smigle.css"/>
+  
+    <link rel="stylesheet" href="/css/style.css"/>
+  
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="msapplication-TileColor" content="#da532c">
+  <meta name="theme-color" content="#ffffff">
+</head>
+
+  <body>
+    <header>
+  <div id="brand">
+    <a class="icon-link" href="https://ahmed-altakrouri.github.io/">
+      <img
+        class="icon"
+        src="/images/brandIcon.svg"
+      />
+    </a>
+    <div class="text">
+      <a href="https://ahmed-altakrouri.github.io/"><h1>AHMED AL-TAKROURI</h1></a>
+      <h3>AI/ML Blog</h3>
+    </div>
+  </div>
+  <nav>
+    
+      
+        
+        <a href="/"><b>Home</b></a>
+      
+         | 
+        <a href="/about/"><b>About</b></a>
+      
+         | 
+        <a href="/posts/"><b>Posts</b></a>
+      
+         | 
+        <a href="/categories/"><b>Categories</b></a>
+      
+         | 
+        <a href="/tags/"><b>Tags</b></a>
+      
+    
+  </nav>
+  <hr />
+</header>
+
+    <div id="content">
+      
+  <main>
+    <article>
+      <h1>NLP/NLU Series: Clustering Linkedin Profiles</h1>
+      <div class="post-meta">
+  <strong>
+    <span>Posted on</span>
+    <time>2023-04-22</time>
+    
+    
+  </strong>
+  <span> • 1775 words</span>
+  <span> • 9 minute read</span>
+  
+  
+</div>
+
+      <div><h2 id="overview">Overview:</h2>
+<p class="justify-text">This notebook shows off how I built a simple model that leans heavily on the power of Sentence Transformers BERT to pull out lots of features. The model is pretty simple because it&rsquo;s based on K-means, but there&rsquo;s a ton of space to jazz it up and make it more complex. Basically, the algorithm I&rsquo;ve got going here is a rock-solid starting point for the job of grouping similar LinkedIn profiles together.</p>
+
+<p>Here&rsquo;s a brief rundown of the algorithm:</p>
+<ol>
+<li>Extract BERT embeddings for sentences or textual data.</li>
+<li>Concat them into single vector.</li>
+<li>Use t-SNE to find optimal number of dimensions that explains the data.</li>
+<li>Reduce dimensionality using PCA.</li>
+<li>Find the optimal number of clusters from K-means by using distortion metric.</li>
+<li>Fit reduced data to optimal number of clusters extracted from the step above.</li>
+<li>Project Extracted clusters to original data.</li>
+</ol>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">from</span> <span style="color:#0e84b5;font-weight:bold">utils</span> <span style="color:#007020;font-weight:bold">import</span> <span style="color:#666">*</span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">from</span> <span style="color:#0e84b5;font-weight:bold">modeling_utils</span> <span style="color:#007020;font-weight:bold">import</span> <span style="color:#666">*</span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">import</span> <span style="color:#0e84b5;font-weight:bold">pandas</span> <span style="color:#007020;font-weight:bold">as</span> <span style="color:#0e84b5;font-weight:bold">pd</span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">import</span> <span style="color:#0e84b5;font-weight:bold">numpy</span> <span style="color:#007020;font-weight:bold">as</span> <span style="color:#0e84b5;font-weight:bold">np</span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">from</span> <span style="color:#0e84b5;font-weight:bold">sklearn.cluster</span> <span style="color:#007020;font-weight:bold">import</span> KMeans
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">from</span> <span style="color:#0e84b5;font-weight:bold">yellowbrick.cluster</span> <span style="color:#007020;font-weight:bold">import</span> KElbowVisualizer
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">from</span> <span style="color:#0e84b5;font-weight:bold">sklearn.preprocessing</span> <span style="color:#007020;font-weight:bold">import</span> StandardScaler
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">import</span> <span style="color:#0e84b5;font-weight:bold">warnings</span>
+</span></span><span style="display:flex;"><span>warnings<span style="color:#666">.</span>filterwarnings(<span style="color:#4070a0">&#39;ignore&#39;</span>)
+</span></span></code></pre></div><h5 id="utils-helper-functions-for-visualizations">Utils, helper functions for visualizations:</h5>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">def</span> <span style="color:#06287e">plot_missing_data</span>(df):
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    missing_data <span style="color:#666">=</span> df<span style="color:#666">.</span>isnull()<span style="color:#666">.</span>sum() <span style="color:#666">/</span> <span style="color:#007020">len</span>(df) <span style="color:#666">*</span> <span style="color:#40a070">100</span>
+</span></span><span style="display:flex;"><span>    missing_data <span style="color:#666">=</span> missing_data[missing_data <span style="color:#666">!=</span> <span style="color:#40a070">0</span>]
+</span></span><span style="display:flex;"><span>    missing_data<span style="color:#666">.</span>sort_values(ascending<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">False</span>, inplace<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>figure(figsize<span style="color:#666">=</span>(<span style="color:#40a070">6</span>, <span style="color:#40a070">6</span>))
+</span></span><span style="display:flex;"><span>    sns<span style="color:#666">.</span>barplot(y<span style="color:#666">=</span>missing_data<span style="color:#666">.</span>index, x<span style="color:#666">=</span>missing_data)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>title(<span style="color:#4070a0">&#39;Percentage of Missing Data by Feature&#39;</span>)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>xlabel(<span style="color:#4070a0">&#39;Percentage Missing (%)&#39;</span>)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>ylabel(<span style="color:#4070a0">&#39;Features&#39;</span>)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>show()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">def</span> <span style="color:#06287e">visualize_normalized_histogram</span>(df, column, top_n<span style="color:#666">=</span><span style="color:#40a070">100</span>, figsize<span style="color:#666">=</span>(<span style="color:#40a070">6</span>, <span style="color:#40a070">20</span>)):
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    value_counts <span style="color:#666">=</span> df[column]<span style="color:#666">.</span>value_counts()<span style="color:#666">.</span>nlargest(top_n)
+</span></span><span style="display:flex;"><span>    value_counts_normalized <span style="color:#666">=</span> (value_counts <span style="color:#666">/</span> <span style="color:#007020">len</span>(df) <span style="color:#666">*</span> <span style="color:#40a070">100</span>)<span style="color:#666">.</span>sort_values(
+</span></span><span style="display:flex;"><span>        ascending<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>)  
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    colors <span style="color:#666">=</span> plt<span style="color:#666">.</span>cm<span style="color:#666">.</span>get_cmap(<span style="color:#4070a0">&#39;tab20&#39;</span>)(np<span style="color:#666">.</span>arange(top_n))[::<span style="color:#666">-</span><span style="color:#40a070">1</span>]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>figure(figsize<span style="color:#666">=</span>figsize)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>barh(value_counts_normalized<span style="color:#666">.</span>index, value_counts_normalized<span style="color:#666">.</span>values, color<span style="color:#666">=</span>colors)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>ylabel(column)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>xlabel(<span style="color:#4070a0">&#39;Percentage&#39;</span>)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>title(<span style="color:#4070a0">f</span><span style="color:#4070a0">&#39;Normalized Value Counts Histogram of </span><span style="color:#70a0d0">{</span>column<span style="color:#70a0d0">}</span><span style="color:#4070a0"> (Top </span><span style="color:#70a0d0">{</span>top_n<span style="color:#70a0d0">}</span><span style="color:#4070a0">)&#39;</span>)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>xticks(rotation<span style="color:#666">=</span><span style="color:#40a070">0</span>)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>show()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">def</span> <span style="color:#06287e">visualize_top_15_category_histogram</span>(data,
+</span></span><span style="display:flex;"><span>                                        category_column,
+</span></span><span style="display:flex;"><span>                                        cluster_column,
+</span></span><span style="display:flex;"><span>                                        top,
+</span></span><span style="display:flex;"><span>                                        title,
+</span></span><span style="display:flex;"><span>                                        width,
+</span></span><span style="display:flex;"><span>                                        height):
+</span></span><span style="display:flex;"><span>                                        
+</span></span><span style="display:flex;"><span>    top_n_categories <span style="color:#666">=</span> data[category_column]<span style="color:#666">.</span>value_counts()<span style="color:#666">.</span>nlargest(top)<span style="color:#666">.</span>index<span style="color:#666">.</span>tolist()
+</span></span><span style="display:flex;"><span>    filtered_data <span style="color:#666">=</span> data[data[category_column]<span style="color:#666">.</span>isin(top_n_categories)]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    fig, ax <span style="color:#666">=</span> plt<span style="color:#666">.</span>subplots(
+</span></span><span style="display:flex;"><span>        figsize<span style="color:#666">=</span>(width <span style="color:#666">/</span> <span style="color:#40a070">80</span>, height <span style="color:#666">/</span> <span style="color:#40a070">80</span>)) 
+</span></span><span style="display:flex;"><span>    sns<span style="color:#666">.</span>histplot(data<span style="color:#666">=</span>filtered_data,
+</span></span><span style="display:flex;"><span>                      x<span style="color:#666">=</span>category_column,
+</span></span><span style="display:flex;"><span>                      hue<span style="color:#666">=</span>cluster_column, 
+</span></span><span style="display:flex;"><span>                      multiple<span style="color:#666">=</span><span style="color:#4070a0">&#34;stack&#34;</span>,
+</span></span><span style="display:flex;"><span>                      ax<span style="color:#666">=</span>ax)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    ax<span style="color:#666">.</span>set_title(title)
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">for</span> label <span style="color:#007020;font-weight:bold">in</span> ax<span style="color:#666">.</span>get_xticklabels():
+</span></span><span style="display:flex;"><span>        label<span style="color:#666">.</span>set_rotation(<span style="color:#40a070">90</span>)
+</span></span><span style="display:flex;"><span>        label<span style="color:#666">.</span>set_fontsize(<span style="color:#40a070">10</span>)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>show()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">def</span> <span style="color:#06287e">get_latest_dates</span>(df):
+</span></span><span style="display:flex;"><span>    df[<span style="color:#4070a0">&#39;sort_key&#39;</span>] <span style="color:#666">=</span> np<span style="color:#666">.</span>where(df[<span style="color:#4070a0">&#39;date_to&#39;</span>] <span style="color:#666">==</span> <span style="color:#40a070">0</span>, df[<span style="color:#4070a0">&#39;date_from&#39;</span>], df[<span style="color:#4070a0">&#39;date_to&#39;</span>])
+</span></span><span style="display:flex;"><span>    df <span style="color:#666">=</span> df<span style="color:#666">.</span>sort_values([<span style="color:#4070a0">&#39;member_id&#39;</span>, <span style="color:#4070a0">&#39;sort_key&#39;</span>], ascending<span style="color:#666">=</span>[<span style="color:#007020;font-weight:bold">True</span>, <span style="color:#007020;font-weight:bold">False</span>])
+</span></span><span style="display:flex;"><span>    latest_dates <span style="color:#666">=</span> df<span style="color:#666">.</span>groupby(<span style="color:#4070a0">&#39;member_id&#39;</span>)<span style="color:#666">.</span>first()<span style="color:#666">.</span>reset_index()
+</span></span><span style="display:flex;"><span>    latest_dates <span style="color:#666">=</span> latest_dates<span style="color:#666">.</span>drop(columns<span style="color:#666">=</span>[<span style="color:#4070a0">&#39;sort_key&#39;</span>])
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">return</span> latest_dates
+</span></span></code></pre></div><h5 id="utils-helper-functions-for-preprocessing">Utils, helper functions for preprocessing:</h5>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">def</span> <span style="color:#06287e">transform_experience_dates</span>(experience):
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">def</span> <span style="color:#06287e">transform_date_format</span>(date_value):
+</span></span><span style="display:flex;"><span>        <span style="color:#007020;font-weight:bold">try</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#007020;font-weight:bold">if</span> <span style="color:#007020">isinstance</span>(date_value, <span style="color:#007020">int</span>) <span style="color:#007020;font-weight:bold">or</span> date_value<span style="color:#666">.</span>isdigit():
+</span></span><span style="display:flex;"><span>                <span style="color:#007020;font-weight:bold">return</span> <span style="color:#007020">str</span>(date_value)  <span style="color:#60a0b0;font-style:italic"># Return the integer or numeric string as is</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#007020;font-weight:bold">else</span>:
+</span></span><span style="display:flex;"><span>                date_string <span style="color:#666">=</span> <span style="color:#007020">str</span>(date_value)
+</span></span><span style="display:flex;"><span>                date_object <span style="color:#666">=</span> datetime<span style="color:#666">.</span>strptime(date_string, <span style="color:#4070a0">&#34;%b-%y&#34;</span>)
+</span></span><span style="display:flex;"><span>                <span style="color:#007020;font-weight:bold">return</span> date_object<span style="color:#666">.</span>strftime(<span style="color:#4070a0">&#34;%Y-%m&#34;</span>)  <span style="color:#60a0b0;font-style:italic"># Format with year and month only</span>
+</span></span><span style="display:flex;"><span>        <span style="color:#007020;font-weight:bold">except</span> <span style="color:#007020">ValueError</span>:
+</span></span><span style="display:flex;"><span>            <span style="color:#007020;font-weight:bold">return</span> <span style="color:#007020;font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">def</span> <span style="color:#06287e">extract_year</span>(value):
+</span></span><span style="display:flex;"><span>        <span style="color:#007020;font-weight:bold">if</span> <span style="color:#007020">isinstance</span>(value, <span style="color:#007020">str</span>):
+</span></span><span style="display:flex;"><span>            pattern <span style="color:#666">=</span> <span style="color:#4070a0">r</span><span style="color:#4070a0">&#39;\b(\d</span><span style="color:#70a0d0">{4}</span><span style="color:#4070a0">)\b&#39;</span>  <span style="color:#60a0b0;font-style:italic"># Regular expression pattern to match a four-digit year</span>
+</span></span><span style="display:flex;"><span>            <span style="color:#007020;font-weight:bold">match</span> <span style="color:#666">=</span> re<span style="color:#666">.</span>search(pattern, value)
+</span></span><span style="display:flex;"><span>            <span style="color:#007020;font-weight:bold">if</span> <span style="color:#007020;font-weight:bold">match</span>:
+</span></span><span style="display:flex;"><span>                <span style="color:#007020;font-weight:bold">return</span> <span style="color:#007020">str</span>(<span style="color:#007020;font-weight:bold">match</span><span style="color:#666">.</span>group(<span style="color:#40a070">1</span>))
+</span></span><span style="display:flex;"><span>        <span style="color:#007020;font-weight:bold">return</span> <span style="color:#007020;font-weight:bold">None</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    experience[<span style="color:#4070a0">&#39;transformed_date_from&#39;</span>] <span style="color:#666">=</span> experience[<span style="color:#4070a0">&#39;date_from&#39;</span>]<span style="color:#666">.</span>apply(transform_date_format)
+</span></span><span style="display:flex;"><span>    experience[<span style="color:#4070a0">&#39;transformed_date_to&#39;</span>] <span style="color:#666">=</span> experience[<span style="color:#4070a0">&#39;date_to&#39;</span>]<span style="color:#666">.</span>apply(transform_date_format)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    experience<span style="color:#666">.</span>loc[experience[<span style="color:#4070a0">&#39;transformed_date_from&#39;</span>]<span style="color:#666">.</span>isnull(), <span style="color:#4070a0">&#39;transformed_date_from&#39;</span>] <span style="color:#666">=</span> experience<span style="color:#666">.</span>loc[
+</span></span><span style="display:flex;"><span>        experience[<span style="color:#4070a0">&#39;transformed_date_from&#39;</span>]<span style="color:#666">.</span>isnull(), <span style="color:#4070a0">&#39;date_from&#39;</span>]<span style="color:#666">.</span>apply(extract_year)
+</span></span><span style="display:flex;"><span>    experience<span style="color:#666">.</span>loc[experience[<span style="color:#4070a0">&#39;transformed_date_to&#39;</span>]<span style="color:#666">.</span>isnull(), <span style="color:#4070a0">&#39;transformed_date_to&#39;</span>] <span style="color:#666">=</span> experience<span style="color:#666">.</span>loc[
+</span></span><span style="display:flex;"><span>        experience[<span style="color:#4070a0">&#39;transformed_date_to&#39;</span>]<span style="color:#666">.</span>isnull(), <span style="color:#4070a0">&#39;date_to&#39;</span>]<span style="color:#666">.</span>apply(extract_year)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    experience[<span style="color:#4070a0">&#39;transformed_date_from&#39;</span>] <span style="color:#666">=</span> experience[<span style="color:#4070a0">&#39;transformed_date_from&#39;</span>]<span style="color:#666">.</span>str<span style="color:#666">.</span>replace(<span style="color:#4070a0">r</span><span style="color:#4070a0">&#39;-\d</span><span style="color:#70a0d0">{2}</span><span style="color:#4070a0">$&#39;</span>, <span style="color:#4070a0">&#39;&#39;</span>, regex<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>    experience[<span style="color:#4070a0">&#39;transformed_date_to&#39;</span>] <span style="color:#666">=</span> experience[<span style="color:#4070a0">&#39;transformed_date_to&#39;</span>]<span style="color:#666">.</span>str<span style="color:#666">.</span>replace(<span style="color:#4070a0">r</span><span style="color:#4070a0">&#39;-\d</span><span style="color:#70a0d0">{2}</span><span style="color:#4070a0">$&#39;</span>, <span style="color:#4070a0">&#39;&#39;</span>, regex<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">return</span> experience
+</span></span></code></pre></div><h5 id="utils-helper-functions-for-modeling">Utils, helper functions for modeling:</h5>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">def</span> <span style="color:#06287e">find_optimal_dimensions_tsne</span>(data, perplexity_range):
+</span></span><span style="display:flex;"><span>    dims <span style="color:#666">=</span> []
+</span></span><span style="display:flex;"><span>    scores <span style="color:#666">=</span> []
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    max_dim <span style="color:#666">=</span> <span style="color:#007020">min</span>(<span style="color:#40a070">3</span>, data<span style="color:#666">.</span>shape[<span style="color:#40a070">1</span>] <span style="color:#666">-</span> <span style="color:#40a070">1</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">for</span> dim <span style="color:#007020;font-weight:bold">in</span> <span style="color:#007020">range</span>(<span style="color:#40a070">1</span>, max_dim <span style="color:#666">+</span> <span style="color:#40a070">1</span>):
+</span></span><span style="display:flex;"><span>        <span style="color:#007020;font-weight:bold">if</span> dim <span style="color:#666">&gt;</span> <span style="color:#007020">len</span>(perplexity_range):
+</span></span><span style="display:flex;"><span>            <span style="color:#007020;font-weight:bold">break</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        tsne <span style="color:#666">=</span> TSNE(n_components<span style="color:#666">=</span>dim)
+</span></span><span style="display:flex;"><span>        embeddings <span style="color:#666">=</span> tsne<span style="color:#666">.</span>fit_transform(data)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>        dims<span style="color:#666">.</span>append(dim)
+</span></span><span style="display:flex;"><span>        scores<span style="color:#666">.</span>append(tsne<span style="color:#666">.</span>kl_divergence_)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#60a0b0;font-style:italic"># Plot the KL divergence scores</span>
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>plot(dims, scores, marker<span style="color:#666">=</span><span style="color:#4070a0">&#39;o&#39;</span>)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>xlabel(<span style="color:#4070a0">&#39;Number of dimensions&#39;</span>)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>ylabel(<span style="color:#4070a0">&#39;KL Divergence Score&#39;</span>)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>title(<span style="color:#4070a0">&#39;t-SNE: KL Divergence&#39;</span>)
+</span></span><span style="display:flex;"><span>    plt<span style="color:#666">.</span>show()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    optimal_dim_index <span style="color:#666">=</span> scores<span style="color:#666">.</span>index(<span style="color:#007020">min</span>(scores))
+</span></span><span style="display:flex;"><span>    optimal_dimensions <span style="color:#666">=</span> dims[optimal_dim_index]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">return</span> optimal_dimensions
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">def</span> <span style="color:#06287e">reduce_dimensionality_with_pca</span>(data, components):
+</span></span><span style="display:flex;"><span>    pca <span style="color:#666">=</span> PCA(n_components<span style="color:#666">=</span>components)
+</span></span><span style="display:flex;"><span>    reduced_data <span style="color:#666">=</span> pca<span style="color:#666">.</span>fit_transform(data)
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">return</span> reduced_data
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#007020;font-weight:bold">def</span> <span style="color:#06287e">fit_kmeans_and_evaluate</span>(data,
+</span></span><span style="display:flex;"><span>                            n_clusters<span style="color:#666">=</span><span style="color:#40a070">4</span>,
+</span></span><span style="display:flex;"><span>                            n_init<span style="color:#666">=</span><span style="color:#40a070">100</span>,
+</span></span><span style="display:flex;"><span>                            max_iter<span style="color:#666">=</span><span style="color:#40a070">400</span>,
+</span></span><span style="display:flex;"><span>                            init<span style="color:#666">=</span><span style="color:#4070a0">&#39;k-means++&#39;</span>, 
+</span></span><span style="display:flex;"><span>                            random_state<span style="color:#666">=</span><span style="color:#40a070">42</span>):
+</span></span><span style="display:flex;"><span>    data_copy <span style="color:#666">=</span> data<span style="color:#666">.</span>copy()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    kmeans_model <span style="color:#666">=</span> KMeans(n_clusters<span style="color:#666">=</span>n_clusters,
+</span></span><span style="display:flex;"><span>                          n_init<span style="color:#666">=</span>n_init,
+</span></span><span style="display:flex;"><span>                          max_iter<span style="color:#666">=</span>max_iter,
+</span></span><span style="display:flex;"><span>                          init<span style="color:#666">=</span>init,
+</span></span><span style="display:flex;"><span>                          random_state<span style="color:#666">=</span>random_state)
+</span></span><span style="display:flex;"><span>                          
+</span></span><span style="display:flex;"><span>    kmeans_model<span style="color:#666">.</span>fit(data_copy)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    silhouette <span style="color:#666">=</span> silhouette_score(data_copy, kmeans_model<span style="color:#666">.</span>labels_, metric<span style="color:#666">=</span><span style="color:#4070a0">&#39;euclidean&#39;</span>)
+</span></span><span style="display:flex;"><span>    <span style="color:#007020">print</span>(<span style="color:#4070a0">&#39;KMeans Scaled Silhouette Score: </span><span style="color:#70a0d0">{}</span><span style="color:#4070a0">&#39;</span><span style="color:#666">.</span>format(silhouette))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    labels <span style="color:#666">=</span> kmeans_model<span style="color:#666">.</span>labels_
+</span></span><span style="display:flex;"><span>    clusters <span style="color:#666">=</span> pd<span style="color:#666">.</span>concat([data_copy, pd<span style="color:#666">.</span>DataFrame({<span style="color:#4070a0">&#39;cluster_scaled&#39;</span>: labels})], axis<span style="color:#666">=</span><span style="color:#40a070">1</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>    <span style="color:#007020;font-weight:bold">return</span> clusters
+</span></span></code></pre></div><h4 id="basic-employee-features">Basic Employee Features:</h4>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>basic_features <span style="color:#666">=</span> pd<span style="color:#666">.</span>read_csv(<span style="color:#4070a0">&#34;Clean Data/basic_features.csv&#34;</span>)
+</span></span><span style="display:flex;"><span>basic_features[<span style="color:#4070a0">&#39;member_id&#39;</span>] <span style="color:#666">=</span> basic_features[<span style="color:#4070a0">&#39;member_id&#39;</span>]<span style="color:#666">.</span>astype(<span style="color:#007020">str</span>)
+</span></span><span style="display:flex;"><span>basic_features<span style="color:#666">.</span>replace(<span style="color:#4070a0">&#34;none&#34;</span>,np<span style="color:#666">.</span>NAN,inplace<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>)
+</span></span></code></pre></div><h4 id="employees-education">Employees Education:</h4>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>education <span style="color:#666">=</span> pd<span style="color:#666">.</span>read_csv(<span style="color:#4070a0">&#34;Clean Data/employees_education_cleaned.csv&#34;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#60a0b0;font-style:italic"># transform member_id to string for ease of use</span>
+</span></span><span style="display:flex;"><span>education[<span style="color:#4070a0">&#34;member_id&#34;</span>] <span style="color:#666">=</span> education[<span style="color:#4070a0">&#34;member_id&#34;</span>]<span style="color:#666">.</span>astype(<span style="color:#007020">str</span>)
+</span></span><span style="display:flex;"><span>education <span style="color:#666">=</span> education[education[<span style="color:#4070a0">&#34;member_id&#34;</span>]<span style="color:#666">.</span>isin(basic_features[<span style="color:#4070a0">&#34;member_id&#34;</span>])]
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>plot_missing_data(education)
+</span></span></code></pre></div><p><img src="/clustering_linkedin_profiles/output_12_0.png" alt="My Image Description"></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>education<span style="color:#666">.</span>drop([<span style="color:#4070a0">&#34;activities_and_societies&#34;</span>,<span style="color:#4070a0">&#34;description&#34;</span>],axis<span style="color:#666">=</span><span style="color:#40a070">1</span>,inplace<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>education[[<span style="color:#4070a0">&#34;date_from&#34;</span>,<span style="color:#4070a0">&#34;date_to&#34;</span>]] <span style="color:#666">=</span> education[[<span style="color:#4070a0">&#34;date_from&#34;</span>,<span style="color:#4070a0">&#34;date_to&#34;</span>]]<span style="color:#666">.</span>fillna(<span style="color:#40a070">0</span>)
+</span></span><span style="display:flex;"><span>education[[<span style="color:#4070a0">&#34;date_from&#34;</span>,<span style="color:#4070a0">&#34;date_to&#34;</span>]] <span style="color:#666">=</span> education[[<span style="color:#4070a0">&#34;date_from&#34;</span>,<span style="color:#4070a0">&#34;date_to&#34;</span>]]<span style="color:#666">.</span>astype(<span style="color:#007020">int</span>)
+</span></span><span style="display:flex;"><span>education[[<span style="color:#4070a0">&#34;title&#34;</span>,<span style="color:#4070a0">&#34;subtitle&#34;</span>]] <span style="color:#666">=</span> education[[<span style="color:#4070a0">&#34;title&#34;</span>,<span style="color:#4070a0">&#34;subtitle&#34;</span>]]<span style="color:#666">.</span>fillna(<span style="color:#4070a0">&#34;none&#34;</span>)
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#60a0b0;font-style:italic"># get the latest employee education obtained per member_id:</span>
+</span></span><span style="display:flex;"><span>latest_education <span style="color:#666">=</span> get_latest_dates(education)
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>visualize_normalized_histogram(latest_education, <span style="color:#4070a0">&#39;title&#39;</span>, top_n<span style="color:#666">=</span><span style="color:#40a070">100</span>)
+</span></span></code></pre></div><p><img src="/clustering_linkedin_profiles/output_15_0.png" alt="My Image Description"></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>latest_education_drop_nan <span style="color:#666">=</span> latest_education<span style="color:#666">.</span>copy()
+</span></span><span style="display:flex;"><span>latest_education_drop_nan <span style="color:#666">=</span> latest_education_drop_nan[latest_education_drop_nan[<span style="color:#4070a0">&#34;subtitle&#34;</span>] <span style="color:#666">!=</span> <span style="color:#4070a0">&#39;none&#39;</span>]
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#60a0b0;font-style:italic"># None is causing a problem it might influence the segmentation algorithm:</span>
+</span></span><span style="display:flex;"><span>visualize_normalized_histogram(latest_education_drop_nan, <span style="color:#4070a0">&#39;subtitle&#39;</span>, top_n<span style="color:#666">=</span><span style="color:#40a070">100</span>)
+</span></span></code></pre></div><p><img src="/clustering_linkedin_profiles/output_17_0.png" alt="My Image Description"></p>
+<h4 id="employees-experience">Employees Experience:</h4>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>experience  <span style="color:#666">=</span> pd<span style="color:#666">.</span>read_csv(<span style="color:#4070a0">&#34;Clean Data/employees_experience_cleaned.csv&#34;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#60a0b0;font-style:italic"># transform member_id to string for ease of use</span>
+</span></span><span style="display:flex;"><span>experience[<span style="color:#4070a0">&#34;member_id&#34;</span>] <span style="color:#666">=</span> experience[<span style="color:#4070a0">&#34;member_id&#34;</span>]<span style="color:#666">.</span>astype(<span style="color:#007020">str</span>)
+</span></span><span style="display:flex;"><span>experience <span style="color:#666">=</span> experience[experience[<span style="color:#4070a0">&#34;member_id&#34;</span>]<span style="color:#666">.</span>isin(experience[<span style="color:#4070a0">&#34;member_id&#34;</span>])]
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>plot_missing_data(experience)
+</span></span></code></pre></div><p><img src="/clustering_linkedin_profiles/output_20_0.png" alt="My Image Description"></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>experience<span style="color:#666">.</span>drop([<span style="color:#4070a0">&#34;description&#34;</span>,<span style="color:#4070a0">&#34;location&#34;</span>,<span style="color:#4070a0">&#34;Years&#34;</span>,<span style="color:#4070a0">&#34;Months&#34;</span>,<span style="color:#4070a0">&#34;duration&#34;</span>,<span style="color:#4070a0">&#34;company_id&#34;</span>],
+</span></span><span style="display:flex;"><span>                 axis<span style="color:#666">=</span><span style="color:#40a070">1</span>,inplace<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>,
+</span></span><span style="display:flex;"><span>                 errors<span style="color:#666">=</span><span style="color:#4070a0">&#34;ignore&#34;</span>)
+</span></span><span style="display:flex;"><span>                 
+</span></span><span style="display:flex;"><span>experience[[<span style="color:#4070a0">&#34;date_from&#34;</span>,<span style="color:#4070a0">&#34;date_to&#34;</span>]] <span style="color:#666">=</span> experience[[<span style="color:#4070a0">&#34;date_from&#34;</span>,<span style="color:#4070a0">&#34;date_to&#34;</span>]]<span style="color:#666">.</span>fillna(<span style="color:#40a070">0</span>)
+</span></span><span style="display:flex;"><span>experience[<span style="color:#4070a0">&#34;title&#34;</span>] <span style="color:#666">=</span> experience[<span style="color:#4070a0">&#34;title&#34;</span>]<span style="color:#666">.</span>fillna(<span style="color:#4070a0">&#34;none&#34;</span>)
+</span></span><span style="display:flex;"><span>experience<span style="color:#666">.</span>drop_duplicates(inplace<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>)
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>experience <span style="color:#666">=</span> transform_experience_dates(experience)
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>experience <span style="color:#666">=</span> experience[[<span style="color:#4070a0">&#34;member_id&#34;</span>,<span style="color:#4070a0">&#34;title&#34;</span>,<span style="color:#4070a0">&#34;transformed_date_from&#34;</span>,<span style="color:#4070a0">&#34;transformed_date_to&#34;</span>]]
+</span></span><span style="display:flex;"><span>experience<span style="color:#666">.</span>rename(columns<span style="color:#666">=</span>{<span style="color:#4070a0">&#39;transformed_date_from&#39;</span>: <span style="color:#4070a0">&#39;date_from&#39;</span>,
+</span></span><span style="display:flex;"><span>                           <span style="color:#4070a0">&#39;transformed_date_to&#39;</span>: <span style="color:#4070a0">&#39;date_to&#39;</span>},inplace<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>)
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>visualize_normalized_histogram(experience[experience[<span style="color:#4070a0">&#34;title&#34;</span>]<span style="color:#666">!=</span><span style="color:#4070a0">&#34;none&#34;</span>], <span style="color:#4070a0">&#39;title&#39;</span>, top_n<span style="color:#666">=</span><span style="color:#40a070">100</span>)
+</span></span></code></pre></div><p><img src="/clustering_linkedin_profiles/output_24_0.png" alt="My Image Description"></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>latest_experience <span style="color:#666">=</span> get_latest_dates(experience)
+</span></span><span style="display:flex;"><span>visualize_normalized_histogram(latest_experience, <span style="color:#4070a0">&#39;title&#39;</span>, top_n<span style="color:#666">=</span><span style="color:#40a070">120</span>)
+</span></span></code></pre></div><p><img src="/clustering_linkedin_profiles/output_25_0.png" alt="My Image Description"></p>
+<h4 id="basic-features">Basic Features:</h4>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>basic_features<span style="color:#666">.</span>isnull()<span style="color:#666">.</span>sum()
+</span></span></code></pre></div><pre><code>member_id                   0
+title                      75
+location                    2
+industry                 1175
+summary                  1399
+recommendations_count       0
+country                     0
+connections_count           0
+experience_count            0
+latitude                    0
+longitude                   0
+months experience        1460
+number of positions      1460
+number of degrees         660
+years of educations       660
+dtype: int64
+</code></pre>
+<h6 id="remove-columns-with-high-percentage-of-missing-values-as-they-affect-the-results-of-cluster">Remove columns with high percentage of missing values as they affect the results of cluster:</h6>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>plot_missing_data(basic_features)
+</span></span></code></pre></div><p><img src="/clustering_linkedin_profiles/output_29_0.png" alt="My Image Description"></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>basic_features[<span style="color:#4070a0">&#34;industry&#34;</span>] <span style="color:#666">=</span> basic_features[<span style="color:#4070a0">&#34;industry&#34;</span>]<span style="color:#666">.</span>fillna(<span style="color:#4070a0">&#34;other&#34;</span>)
+</span></span><span style="display:flex;"><span>basic_features[<span style="color:#4070a0">&#34;title&#34;</span>] <span style="color:#666">=</span> basic_features[<span style="color:#4070a0">&#34;title&#34;</span>]<span style="color:#666">.</span>fillna(<span style="color:#4070a0">&#34;other&#34;</span>)
+</span></span><span style="display:flex;"><span>basic_features[<span style="color:#4070a0">&#34;location&#34;</span>] <span style="color:#666">=</span> basic_features[<span style="color:#4070a0">&#34;location&#34;</span>]<span style="color:#666">.</span>fillna(<span style="color:#4070a0">&#34;unknown&#34;</span>)
+</span></span><span style="display:flex;"><span>basic_features[[<span style="color:#4070a0">&#34;number of degrees&#34;</span>,<span style="color:#4070a0">&#34;years of educations&#34;</span>]] <span style="color:#666">=</span> basic_features[
+</span></span><span style="display:flex;"><span>                                                              [<span style="color:#4070a0">&#34;number of degrees&#34;</span>,
+</span></span><span style="display:flex;"><span>                                                              <span style="color:#4070a0">&#34;years of educations&#34;</span>]
+</span></span><span style="display:flex;"><span>                                                              ]<span style="color:#666">.</span>fillna(<span style="color:#4070a0">&#34;0&#34;</span>)
+</span></span><span style="display:flex;"><span>basic_features<span style="color:#666">.</span>drop([<span style="color:#4070a0">&#34;months experience&#34;</span>,
+</span></span><span style="display:flex;"><span>                     <span style="color:#4070a0">&#34;number of positions&#34;</span>,
+</span></span><span style="display:flex;"><span>                     <span style="color:#4070a0">&#34;summary&#34;</span>],
+</span></span><span style="display:flex;"><span>                      axis<span style="color:#666">=</span><span style="color:#40a070">1</span>,
+</span></span><span style="display:flex;"><span>                      inplace<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>)
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>visualize_normalized_histogram(basic_features[basic_features[<span style="color:#4070a0">&#34;title&#34;</span>]<span style="color:#666">!=</span><span style="color:#4070a0">&#34;other&#34;</span>],
+</span></span><span style="display:flex;"><span>                                              <span style="color:#4070a0">&#34;title&#34;</span>,
+</span></span><span style="display:flex;"><span>                                               top_n<span style="color:#666">=</span><span style="color:#40a070">120</span>)
+</span></span></code></pre></div><p><img src="/clustering_linkedin_profiles/output_31_0.png" alt="My Image Description"></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>visualize_normalized_histogram(basic_features[basic_features[<span style="color:#4070a0">&#34;industry&#34;</span>]<span style="color:#666">!=</span><span style="color:#4070a0">&#34;other&#34;</span>],<span style="color:#4070a0">&#34;industry&#34;</span>,top_n<span style="color:#666">=</span><span style="color:#40a070">120</span>)
+</span></span></code></pre></div><p><img src="/clustering_linkedin_profiles/output_32_0.png" alt="My Image Description"></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>visualize_normalized_histogram(basic_features,<span style="color:#4070a0">&#34;location&#34;</span>,top_n<span style="color:#666">=</span><span style="color:#40a070">120</span>)
+</span></span></code></pre></div><p><img src="/clustering_linkedin_profiles/output_33_0.png" alt="My Image Description"></p>
+<h6 id="merge-employees-basic-features-the-latest-education-and-experience">Merge employees basic features, the latest education and experience:</h6>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>latest_experience<span style="color:#666">.</span>drop([<span style="color:#4070a0">&#34;date_from&#34;</span>,<span style="color:#4070a0">&#34;date_to&#34;</span>],axis<span style="color:#666">=</span><span style="color:#40a070">1</span>,inplace<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>,errors<span style="color:#666">=</span><span style="color:#4070a0">&#34;ignore&#34;</span>)
+</span></span><span style="display:flex;"><span>latest_experience<span style="color:#666">.</span>rename(columns<span style="color:#666">=</span>{<span style="color:#4070a0">&#34;title&#34;</span>:<span style="color:#4070a0">&#34;experience_title&#34;</span>}, inplace<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>latest_experience<span style="color:#666">.</span>head(<span style="color:#40a070">10</span>)
+</span></span></code></pre></div><div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+<pre><code>.dataframe tbody tr th {
+    vertical-align: top;
+}
+
+.dataframe thead th {
+    text-align: right;
+}
+</code></pre>
+<p></style></p>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>member_id</th>
+      <th>experience_title</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1000769811</td>
+      <td>Sales  Channel Advisor</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1001027856</td>
+      <td>Product Development Assistant</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>1001731893</td>
+      <td>VP RD</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>1002107022</td>
+      <td>Digital Marketing  Ecommerce Consultant</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>1002900696</td>
+      <td>Branch Manager</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>1003503234</td>
+      <td>Founding Shareholder</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>1004617047</td>
+      <td>RRH</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>1004931912</td>
+      <td>Senior Product Development Specialist</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>1005561303</td>
+      <td>Sales consultant</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>100559115</td>
+      <td>Marketing B2B Specialist</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>latest_education<span style="color:#666">.</span>drop([<span style="color:#4070a0">&#34;date_from&#34;</span>,<span style="color:#4070a0">&#34;date_to&#34;</span>],axis<span style="color:#666">=</span><span style="color:#40a070">1</span>,inplace<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>,errors<span style="color:#666">=</span><span style="color:#4070a0">&#34;ignore&#34;</span>)
+</span></span><span style="display:flex;"><span>latest_education<span style="color:#666">.</span>rename(columns<span style="color:#666">=</span>{<span style="color:#4070a0">&#34;title&#34;</span>:<span style="color:#4070a0">&#34;education_title&#34;</span>,<span style="color:#4070a0">&#34;subtitle&#34;</span>:<span style="color:#4070a0">&#34;education_subtitle&#34;</span>}, inplace<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">True</span>)
+</span></span><span style="display:flex;"><span>latest_education<span style="color:#666">.</span>head(<span style="color:#40a070">10</span>)
+</span></span></code></pre></div><div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+<pre><code>.dataframe tbody tr th {
+    vertical-align: top;
+}
+
+.dataframe thead th {
+    text-align: right;
+}
+</code></pre>
+<p></style></p>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>member_id</th>
+      <th>education_title</th>
+      <th>education_subtitle</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1000769811</td>
+      <td>University of California Santa Barbara</td>
+      <td>BA Business EconomicsPhilosophy Double Major</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1001027856</td>
+      <td>British Academy of Interior Design</td>
+      <td>Postgraduate Diploma Interior Design</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>1001731893</td>
+      <td>The Academic College of TelAviv Yaffo</td>
+      <td>Computer Science</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>1002107022</td>
+      <td>Epping forest college</td>
+      <td>2 A levels Computer studies</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>1002900696</td>
+      <td>bridge road adult education</td>
+      <td>OCN Psychology criminal Psychology Psychosocia...</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>1003503234</td>
+      <td>Lancaster University</td>
+      <td>BSc Hons in Management</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>1004617047</td>
+      <td>Université Paris II  Assas</td>
+      <td>Master II Droit et pratique des relations du t...</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>1004931912</td>
+      <td>University of Michigan</td>
+      <td>Post doc Radiopharmaceutical Chemistry in Nucl...</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>1005561303</td>
+      <td>Rother Valley College</td>
+      <td>Btec diploma in business  finance business pas...</td>
+    </tr>
+    <tr>
+      <th>9</th>
+      <td>100559115</td>
+      <td>CONMEBOL</td>
+      <td>Certified Sports Managment</td>
+    </tr>
+  </tbody>
+</table>
+</div>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>overall_features  <span style="color:#666">=</span> basic_features<span style="color:#666">.</span>merge(latest_education, on<span style="color:#666">=</span><span style="color:#4070a0">&#39;member_id&#39;</span>, how<span style="color:#666">=</span><span style="color:#4070a0">&#39;outer&#39;</span>)<span style="color:#666">.</span>merge(latest_experience, on<span style="color:#666">=</span><span style="color:#4070a0">&#39;member_id&#39;</span>, how<span style="color:#666">=</span><span style="color:#4070a0">&#39;outer&#39;</span>)
+</span></span></code></pre></div><h6 id="additional-preprocessing">additional preprocessing:</h6>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>string_columns <span style="color:#666">=</span> [<span style="color:#4070a0">&#34;education_title&#34;</span>,
+</span></span><span style="display:flex;"><span>                  <span style="color:#4070a0">&#34;country&#34;</span>,
+</span></span><span style="display:flex;"><span>                  <span style="color:#4070a0">&#34;industry&#34;</span>,
+</span></span><span style="display:flex;"><span>                  <span style="color:#4070a0">&#34;location&#34;</span>,
+</span></span><span style="display:flex;"><span>                  <span style="color:#4070a0">&#34;title&#34;</span>,
+</span></span><span style="display:flex;"><span>                  <span style="color:#4070a0">&#34;education_subtitle&#34;</span>,
+</span></span><span style="display:flex;"><span>                  <span style="color:#4070a0">&#34;experience_title&#34;</span>]
+</span></span><span style="display:flex;"><span>overall_features[string_columns] <span style="color:#666">=</span> overall_features[string_columns]<span style="color:#666">.</span>fillna(<span style="color:#4070a0">&#39;none&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>numerical_cols <span style="color:#666">=</span> [<span style="color:#4070a0">&#34;experience_count&#34;</span>,
+</span></span><span style="display:flex;"><span>                  <span style="color:#4070a0">&#34;connections_count&#34;</span>,
+</span></span><span style="display:flex;"><span>                  <span style="color:#4070a0">&#34;years of educations&#34;</span>,
+</span></span><span style="display:flex;"><span>                  <span style="color:#4070a0">&#34;number of degrees&#34;</span>,
+</span></span><span style="display:flex;"><span>                  <span style="color:#4070a0">&#34;recommendations_count&#34;</span>,
+</span></span><span style="display:flex;"><span>                  <span style="color:#4070a0">&#34;longitude&#34;</span>,
+</span></span><span style="display:flex;"><span>                  <span style="color:#4070a0">&#34;latitude&#34;</span>]
+</span></span><span style="display:flex;"><span>overall_features[numerical_cols] <span style="color:#666">=</span> overall_features[numerical_cols]<span style="color:#666">.</span>fillna(<span style="color:#40a070">0</span>)
+</span></span><span style="display:flex;"><span>overall_features<span style="color:#666">.</span>isnull()<span style="color:#666">.</span>sum()
+</span></span></code></pre></div><pre><code>member_id                0
+title                    0
+location                 0
+industry                 0
+recommendations_count    0
+country                  0
+connections_count        0
+experience_count         0
+latitude                 0
+longitude                0
+number of degrees        0
+years of educations      0
+education_title          0
+education_subtitle       0
+experience_title         0
+dtype: int64
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>visualize_none_percentages(overall_features)
+</span></span></code></pre></div><p><img src="/clustering_linkedin_profiles/output_40_0.png" alt="My Image Description"></p>
+<h6 id="drop-rows-that-contain-none-as-it-effects-the-performance-of-clustering">Drop rows that contain &ldquo;none&rdquo; as it effects the performance of Clustering:</h6>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>overall_features <span style="color:#666">=</span> overall_features[<span style="color:#666">~</span>overall_features<span style="color:#666">.</span>apply(<span style="color:#007020;font-weight:bold">lambda</span> row: row<span style="color:#666">.</span>astype(<span style="color:#007020">str</span>)<span style="color:#666">.</span>str<span style="color:#666">.</span>contains(<span style="color:#4070a0">&#39;none&#39;</span>))<span style="color:#666">.</span>any(axis<span style="color:#666">=</span><span style="color:#40a070">1</span>)]
+</span></span><span style="display:flex;"><span>overall_features <span style="color:#666">=</span> overall_features[<span style="color:#666">~</span>overall_features<span style="color:#666">.</span>apply(<span style="color:#007020;font-weight:bold">lambda</span> row: row<span style="color:#666">.</span>astype(<span style="color:#007020">str</span>)<span style="color:#666">.</span>str<span style="color:#666">.</span>contains(<span style="color:#4070a0">&#39;other&#39;</span>))<span style="color:#666">.</span>any(axis<span style="color:#666">=</span><span style="color:#40a070">1</span>)]
+</span></span><span style="display:flex;"><span>overall_features[[<span style="color:#4070a0">&#34;title&#34;</span>,<span style="color:#4070a0">&#34;industry&#34;</span>,<span style="color:#4070a0">&#34;location&#34;</span>,<span style="color:#4070a0">&#34;country&#34;</span>,<span style="color:#4070a0">&#34;education_title&#34;</span>,<span style="color:#4070a0">&#34;education_subtitle&#34;</span>,<span style="color:#4070a0">&#34;experience_title&#34;</span>]]<span style="color:#666">.</span>head(<span style="color:#40a070">5</span>)<span style="color:#666">.</span>style<span style="color:#666">.</span>background_gradient()
+</span></span></code></pre></div><style type="text/css">
+</style>
+<table id="T_23d8a">
+  <thead>
+    <tr>
+      <th class="blank level0" >&nbsp;</th>
+      <th id="T_23d8a_level0_col0" class="col_heading level0 col0" >title</th>
+      <th id="T_23d8a_level0_col1" class="col_heading level0 col1" >industry</th>
+      <th id="T_23d8a_level0_col2" class="col_heading level0 col2" >location</th>
+      <th id="T_23d8a_level0_col3" class="col_heading level0 col3" >country</th>
+      <th id="T_23d8a_level0_col4" class="col_heading level0 col4" >education_title</th>
+      <th id="T_23d8a_level0_col5" class="col_heading level0 col5" >education_subtitle</th>
+      <th id="T_23d8a_level0_col6" class="col_heading level0 col6" >experience_title</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th id="T_23d8a_level0_row0" class="row_heading level0 row0" >4</th>
+      <td id="T_23d8a_row0_col0" class="data row0 col0" >I Help Professionals Make Career  Business Breakthroughs  Coaching  Consulting  Personal Branding  Resumes  LinkedIn Profile  Thought Leadership Development</td>
+      <td id="T_23d8a_row0_col1" class="data row0 col1" >Information Technology & Services</td>
+      <td id="T_23d8a_row0_col2" class="data row0 col2" >Dallas, Texas, United States</td>
+      <td id="T_23d8a_row0_col3" class="data row0 col3" >United States</td>
+      <td id="T_23d8a_row0_col4" class="data row0 col4" >Harvard University</td>
+      <td id="T_23d8a_row0_col5" class="data row0 col5" >Bachelor of Arts BA Computer Science  Focus on Artificial Technology Machine Learning and Education Techology</td>
+      <td id="T_23d8a_row0_col6" class="data row0 col6" >SVP Customer Success</td>
+    </tr>
+    <tr>
+      <th id="T_23d8a_level0_row1" class="row_heading level0 row1" >6</th>
+      <td id="T_23d8a_row1_col0" class="data row1 col0" >Sr Research Engineer at BAMF Health</td>
+      <td id="T_23d8a_row1_col1" class="data row1 col1" >Medical Device</td>
+      <td id="T_23d8a_row1_col2" class="data row1 col2" >Grand Rapids, Michigan, United States</td>
+      <td id="T_23d8a_row1_col3" class="data row1 col3" >United States</td>
+      <td id="T_23d8a_row1_col4" class="data row1 col4" >Grand Valley State University</td>
+      <td id="T_23d8a_row1_col5" class="data row1 col5" >Master of Science Engineering  Biomedical Engineering</td>
+      <td id="T_23d8a_row1_col6" class="data row1 col6" >Image Processing Research Engineer</td>
+    </tr>
+    <tr>
+      <th id="T_23d8a_level0_row2" class="row_heading level0 row2" >7</th>
+      <td id="T_23d8a_row2_col0" class="data row2 col0" >Head of New Business at Cube Online</td>
+      <td id="T_23d8a_row2_col1" class="data row2 col1" >Events Services</td>
+      <td id="T_23d8a_row2_col2" class="data row2 col2" >Sydney, New South Wales, Australia</td>
+      <td id="T_23d8a_row2_col3" class="data row2 col3" >Australia</td>
+      <td id="T_23d8a_row2_col4" class="data row2 col4" >University of the West of England</td>
+      <td id="T_23d8a_row2_col5" class="data row2 col5" >BA Hons Business Studies</td>
+      <td id="T_23d8a_row2_col6" class="data row2 col6" >APAC Hunter Manager</td>
+    </tr>
+    <tr>
+      <th id="T_23d8a_level0_row3" class="row_heading level0 row3" >8</th>
+      <td id="T_23d8a_row3_col0" class="data row3 col0" >Veneer Sales Manager at Mundy Veneer Limited</td>
+      <td id="T_23d8a_row3_col1" class="data row3 col1" >Furniture</td>
+      <td id="T_23d8a_row3_col2" class="data row3 col2" >Taunton, England, United Kingdom</td>
+      <td id="T_23d8a_row3_col3" class="data row3 col3" >United Kingdom</td>
+      <td id="T_23d8a_row3_col4" class="data row3 col4" >Northumbria University</td>
+      <td id="T_23d8a_row3_col5" class="data row3 col5" >Masters Degree MSc Hons Business with Management</td>
+      <td id="T_23d8a_row3_col6" class="data row3 col6" >Project Coordinator</td>
+    </tr>
+    <tr>
+      <th id="T_23d8a_level0_row4" class="row_heading level0 row4" >10</th>
+      <td id="T_23d8a_row4_col0" class="data row4 col0" >ML  Genomics  Datadriven biology</td>
+      <td id="T_23d8a_row4_col1" class="data row4 col1" >Computer Software</td>
+      <td id="T_23d8a_row4_col2" class="data row4 col2" >Cambridge, Massachusetts, United States</td>
+      <td id="T_23d8a_row4_col3" class="data row4 col3" >United States</td>
+      <td id="T_23d8a_row4_col4" class="data row4 col4" >Technical University of Munich</td>
+      <td id="T_23d8a_row4_col5" class="data row4 col5" >Doctor of Philosophy  PhD Computational Biology</td>
+      <td id="T_23d8a_row4_col6" class="data row4 col6" >Computational Biologist</td>
+    </tr>
+  </tbody>
+</table>
+<h6 id="extract-sentence-embeddings">Extract Sentence Embeddings:</h6>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#60a0b0;font-style:italic">### extract high dimensional embeddings using sentence transformer BERT:</span>
+</span></span><span style="display:flex;"><span>title_embeddings <span style="color:#666">=</span> get_embeddings(overall_features,<span style="color:#4070a0">&#39;title&#39;</span>)
+</span></span><span style="display:flex;"><span>industry_embeddings <span style="color:#666">=</span> get_embeddings(overall_features,<span style="color:#4070a0">&#39;industry&#39;</span>)
+</span></span><span style="display:flex;"><span>location_embeddings <span style="color:#666">=</span> get_embeddings(overall_features,<span style="color:#4070a0">&#39;location&#39;</span>)
+</span></span><span style="display:flex;"><span>country_embeddings <span style="color:#666">=</span> get_embeddings(overall_features,<span style="color:#4070a0">&#39;country&#39;</span>)
+</span></span><span style="display:flex;"><span>education_title <span style="color:#666">=</span> get_embeddings(overall_features,<span style="color:#4070a0">&#39;education_title&#39;</span>)
+</span></span><span style="display:flex;"><span>education_subtitle <span style="color:#666">=</span> get_embeddings(overall_features,<span style="color:#4070a0">&#39;education_subtitle&#39;</span>)
+</span></span><span style="display:flex;"><span>experience_title <span style="color:#666">=</span> get_embeddings(overall_features,<span style="color:#4070a0">&#39;experience_title&#39;</span>)
+</span></span></code></pre></div><h6 id="merge-with-simple-features">Merge with simple features:</h6>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>merged_embeddings <span style="color:#666">=</span> np<span style="color:#666">.</span>concatenate((
+</span></span><span style="display:flex;"><span>    title_embeddings,
+</span></span><span style="display:flex;"><span>    industry_embeddings,
+</span></span><span style="display:flex;"><span>    location_embeddings,
+</span></span><span style="display:flex;"><span>    country_embeddings,
+</span></span><span style="display:flex;"><span>    education_title,
+</span></span><span style="display:flex;"><span>    education_subtitle,
+</span></span><span style="display:flex;"><span>    experience_title
+</span></span><span style="display:flex;"><span>), axis<span style="color:#666">=</span><span style="color:#40a070">1</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>additional_numerical_features <span style="color:#666">=</span> overall_features[[
+</span></span><span style="display:flex;"><span>    <span style="color:#4070a0">&#39;recommendations_count&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#4070a0">&#39;connections_count&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#4070a0">&#39;experience_count&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#4070a0">&#39;latitude&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#4070a0">&#39;longitude&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#4070a0">&#39;member_id&#39;</span>
+</span></span><span style="display:flex;"><span>]]<span style="color:#666">.</span>values
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>simple_features <span style="color:#666">=</span> basic_features[[<span style="color:#4070a0">&#39;recommendations_count&#39;</span>,
+</span></span><span style="display:flex;"><span>                                  <span style="color:#4070a0">&#39;connections_count&#39;</span>,
+</span></span><span style="display:flex;"><span>                                  <span style="color:#4070a0">&#39;experience_count&#39;</span>,
+</span></span><span style="display:flex;"><span>                                  <span style="color:#4070a0">&#39;latitude&#39;</span>,
+</span></span><span style="display:flex;"><span>                                  <span style="color:#4070a0">&#39;longitude&#39;</span>, ]]
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>final_data <span style="color:#666">=</span> np<span style="color:#666">.</span>concatenate((merged_embeddings, additional_numerical_features), axis<span style="color:#666">=</span><span style="color:#40a070">1</span>)
+</span></span><span style="display:flex;"><span>final_data <span style="color:#666">=</span> pd<span style="color:#666">.</span>DataFrame(final_data)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#60a0b0;font-style:italic"># keep a list or ordered members_ids to use later for explanations:</span>
+</span></span><span style="display:flex;"><span>members_ids <span style="color:#666">=</span> final_data<span style="color:#666">.</span>iloc[:, <span style="color:#666">-</span><span style="color:#40a070">1</span>]<span style="color:#666">.</span>tolist()
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#60a0b0;font-style:italic"># drop members_id, as it&#39;s not used in modeling the data, and it will </span>
+</span></span><span style="display:flex;"><span><span style="color:#60a0b0;font-style:italic"># lead to misleading results:</span>
+</span></span><span style="display:flex;"><span>final_data <span style="color:#666">=</span> final_data<span style="color:#666">.</span>drop(final_data<span style="color:#666">.</span>columns[<span style="color:#666">-</span><span style="color:#40a070">1</span>], axis<span style="color:#666">=</span><span style="color:#40a070">1</span>)
+</span></span></code></pre></div><h6 id="find-optimal-number-of-components">Find Optimal Number of Components:</h6>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>find_optimal_dimensions_tsne(merged_embeddings, [<span style="color:#40a070">5</span>,<span style="color:#40a070">10</span>,<span style="color:#40a070">15</span>,<span style="color:#40a070">20</span>,<span style="color:#40a070">25</span>,<span style="color:#40a070">30</span>,<span style="color:#40a070">35</span>,<span style="color:#40a070">40</span>,<span style="color:#40a070">45</span>,<span style="color:#40a070">50</span>])
+</span></span></code></pre></div><p><img src="/clustering_linkedin_profiles/output_48_0.png" alt="My Image Description"></p>
+<h6 id="reduce-embedding-dimensionality">Reduce Embedding Dimensionality:</h6>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>reduced_merged_embeddings <span style="color:#666">=</span> reduce_dimensionality_with_pca(merged_embeddings,<span style="color:#40a070">3</span>)
+</span></span><span style="display:flex;"><span>reduced_merged_embeddings <span style="color:#666">=</span> pd<span style="color:#666">.</span>DataFrame(reduced_merged_embeddings)
+</span></span><span style="display:flex;"><span>reduced_merged_embeddings
+</span></span></code></pre></div><div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+<pre><code>.dataframe tbody tr th {
+    vertical-align: top;
+}
+
+.dataframe thead th {
+    text-align: right;
+}
+</code></pre>
+<p></style></p>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>0</th>
+      <th>1</th>
+      <th>2</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>-0.309824</td>
+      <td>-0.357302</td>
+      <td>0.296566</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>-0.611905</td>
+      <td>-0.678734</td>
+      <td>-0.044584</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>0.103592</td>
+      <td>0.197899</td>
+      <td>0.296579</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>0.664791</td>
+      <td>-0.113497</td>
+      <td>0.114943</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>-0.656240</td>
+      <td>-0.552984</td>
+      <td>0.348519</td>
+    </tr>
+    <tr>
+      <th>...</th>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <th>1140</th>
+      <td>0.779930</td>
+      <td>-0.071203</td>
+      <td>0.002138</td>
+    </tr>
+    <tr>
+      <th>1141</th>
+      <td>0.859704</td>
+      <td>-0.109584</td>
+      <td>-0.098612</td>
+    </tr>
+    <tr>
+      <th>1142</th>
+      <td>-0.502135</td>
+      <td>0.747044</td>
+      <td>0.863029</td>
+    </tr>
+    <tr>
+      <th>1143</th>
+      <td>0.561427</td>
+      <td>-0.077284</td>
+      <td>-0.185717</td>
+    </tr>
+    <tr>
+      <th>1144</th>
+      <td>-0.542131</td>
+      <td>0.734136</td>
+      <td>-0.657090</td>
+    </tr>
+  </tbody>
+</table>
+<p>1145 rows × 3 columns</p>
+</div>
+<h6 id="scale-simple-numerical-features">Scale Simple Numerical Features:</h6>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>scaler <span style="color:#666">=</span> StandardScaler()
+</span></span><span style="display:flex;"><span>scaled_data <span style="color:#666">=</span> scaler<span style="color:#666">.</span>fit_transform(simple_features)
+</span></span><span style="display:flex;"><span>scaled_data <span style="color:#666">=</span> pd<span style="color:#666">.</span>DataFrame(scaled_data)
+</span></span></code></pre></div><h6 id="merge-with-reduced-embedding-vectors">Merge with Reduced Embedding Vectors:</h6>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>merged_embeddings <span style="color:#666">=</span> pd<span style="color:#666">.</span>DataFrame(merged_embeddings)
+</span></span><span style="display:flex;"><span>all_features <span style="color:#666">=</span> pd<span style="color:#666">.</span>concat([merged_embeddings, scaled_data], axis<span style="color:#666">=</span><span style="color:#40a070">1</span>)
+</span></span></code></pre></div><h6 id="find-optimal-number-of-k-that-describes-the-data-with-the-smallest-distortion-score">Find optimal number of K that describes the data with the smallest distortion score:</h6>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>model <span style="color:#666">=</span> KMeans(n_init<span style="color:#666">=</span><span style="color:#40a070">10</span>)
+</span></span><span style="display:flex;"><span>visualizer <span style="color:#666">=</span> KElbowVisualizer(model, k<span style="color:#666">=</span>(<span style="color:#40a070">2</span>,<span style="color:#40a070">10</span>))
+</span></span><span style="display:flex;"><span>visualizer<span style="color:#666">.</span>fit(reduced_merged_embeddings)
+</span></span><span style="display:flex;"><span>visualizer<span style="color:#666">.</span>show()
+</span></span></code></pre></div><p><img src="/clustering_linkedin_profiles/output_56_0.png" alt="My Image Description"></p>
+<pre><code>&lt;Axes: title={'center': 'Distortion Score Elbow for KMeans Clustering'}, xlabel='k', ylabel='distortion score'&gt;
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>merged_embeddings_clusters <span style="color:#666">=</span> fit_kmeans_and_evaluate(reduced_merged_embeddings,
+</span></span><span style="display:flex;"><span>                                                     <span style="color:#40a070">4</span>,
+</span></span><span style="display:flex;"><span>                                                     n_init<span style="color:#666">=</span><span style="color:#40a070">100</span>,
+</span></span><span style="display:flex;"><span>                                                     max_iter<span style="color:#666">=</span><span style="color:#40a070">100000</span>,
+</span></span><span style="display:flex;"><span>                                                     init<span style="color:#666">=</span><span style="color:#4070a0">&#39;k-means++&#39;</span>,
+</span></span><span style="display:flex;"><span>                                                     random_state<span style="color:#666">=</span><span style="color:#40a070">412</span>)
+</span></span></code></pre></div><pre><code>KMeans Scaled Silhouette Score: 0.5201332569122314
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span><span style="color:#60a0b0;font-style:italic"># rename extracted clusters:</span>
+</span></span><span style="display:flex;"><span>merged_embeddings_clusters <span style="color:#666">=</span> merged_embeddings_clusters<span style="color:#666">.</span>rename(columns<span style="color:#666">=</span>{<span style="color:#40a070">0</span>:<span style="color:#4070a0">&#34;component 1&#34;</span>,
+</span></span><span style="display:flex;"><span>                                                                        <span style="color:#40a070">1</span>:<span style="color:#4070a0">&#34;component 2&#34;</span>,
+</span></span><span style="display:flex;"><span>                                                                        <span style="color:#40a070">2</span>:<span style="color:#4070a0">&#34;component 3&#34;</span>})
+</span></span><span style="display:flex;"><span>merged_embeddings_clusters[<span style="color:#4070a0">&#34;member_id&#34;</span>] <span style="color:#666">=</span> members_ids
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>overall_features[<span style="color:#4070a0">&#34;member_id&#34;</span>] <span style="color:#666">=</span> overall_features[<span style="color:#4070a0">&#34;member_id&#34;</span>]<span style="color:#666">.</span>astype(<span style="color:#007020">int</span>)
+</span></span><span style="display:flex;"><span>merged_embeddings_clusters[<span style="color:#4070a0">&#34;member_id&#34;</span>] <span style="color:#666">=</span> merged_embeddings_clusters[<span style="color:#4070a0">&#34;member_id&#34;</span>]<span style="color:#666">.</span>astype(<span style="color:#007020">int</span>)
+</span></span><span style="display:flex;"><span>overall_results <span style="color:#666">=</span> overall_features<span style="color:#666">.</span>merge(merged_embeddings_clusters,on<span style="color:#666">=</span><span style="color:#4070a0">&#39;member_id&#39;</span>)
+</span></span><span style="display:flex;"><span>overall_results[<span style="color:#4070a0">&#34;cluster_scaled_string&#34;</span>] <span style="color:#666">=</span> overall_results[<span style="color:#4070a0">&#34;cluster_scaled&#34;</span>]<span style="color:#666">.</span>astype(<span style="color:#007020">str</span>)
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>visualize_top_15_category_histogram(overall_results,
+</span></span><span style="display:flex;"><span>                                    category_column<span style="color:#666">=</span><span style="color:#4070a0">&#34;industry&#34;</span>,
+</span></span><span style="display:flex;"><span>                                    cluster_column<span style="color:#666">=</span><span style="color:#4070a0">&#34;cluster_scaled_string&#34;</span>,
+</span></span><span style="display:flex;"><span>                                    top<span style="color:#666">=</span><span style="color:#40a070">80</span>,
+</span></span><span style="display:flex;"><span>                                    title<span style="color:#666">=</span><span style="color:#4070a0">&#34;Clusters Labels Relative to Industry&#34;</span>,
+</span></span><span style="display:flex;"><span>                                    width<span style="color:#666">=</span><span style="color:#40a070">1000</span>,
+</span></span><span style="display:flex;"><span>                                    height<span style="color:#666">=</span><span style="color:#40a070">800</span>
+</span></span><span style="display:flex;"><span>                                    )
+</span></span></code></pre></div><p><img src="/clustering_linkedin_profiles/output_60_0.png" alt="My Image Description"></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>visualize_top_15_category_histogram(overall_results,
+</span></span><span style="display:flex;"><span>                                    category_column<span style="color:#666">=</span><span style="color:#4070a0">&#34;location&#34;</span>,
+</span></span><span style="display:flex;"><span>                                    cluster_column<span style="color:#666">=</span><span style="color:#4070a0">&#34;cluster_scaled_string&#34;</span>
+</span></span><span style="display:flex;"><span>                                    ,top<span style="color:#666">=</span><span style="color:#40a070">50</span>,
+</span></span><span style="display:flex;"><span>                                    title<span style="color:#666">=</span><span style="color:#4070a0">&#34;Cluster Labels Relative to Location&#34;</span>,
+</span></span><span style="display:flex;"><span>                                    width<span style="color:#666">=</span><span style="color:#40a070">1000</span>,
+</span></span><span style="display:flex;"><span>                                    height<span style="color:#666">=</span><span style="color:#40a070">800</span>
+</span></span><span style="display:flex;"><span>                                    )
+</span></span></code></pre></div><p><img src="/clustering_linkedin_profiles/output_61_0.png" alt="My Image Description"></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>visualize_top_15_category_histogram(overall_results,
+</span></span><span style="display:flex;"><span>                                    category_column<span style="color:#666">=</span><span style="color:#4070a0">&#34;title&#34;</span>,
+</span></span><span style="display:flex;"><span>                                    cluster_column<span style="color:#666">=</span><span style="color:#4070a0">&#34;cluster_scaled_string&#34;</span>,
+</span></span><span style="display:flex;"><span>                                    top<span style="color:#666">=</span><span style="color:#40a070">30</span>,
+</span></span><span style="display:flex;"><span>                                    title<span style="color:#666">=</span><span style="color:#4070a0">&#34;Cluster Labels Relative to title&#34;</span>,
+</span></span><span style="display:flex;"><span>                                    width<span style="color:#666">=</span><span style="color:#40a070">1000</span>,
+</span></span><span style="display:flex;"><span>                                    height<span style="color:#666">=</span><span style="color:#40a070">800</span>
+</span></span><span style="display:flex;"><span>                                    )
+</span></span></code></pre></div><p><img src="/clustering_linkedin_profiles/output_62_0.png" alt="My Image Description"></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>visualize_top_15_category_histogram(overall_results,
+</span></span><span style="display:flex;"><span>                                    category_column<span style="color:#666">=</span><span style="color:#4070a0">&#34;country&#34;</span>,
+</span></span><span style="display:flex;"><span>                                    cluster_column<span style="color:#666">=</span><span style="color:#4070a0">&#34;cluster_scaled_string&#34;</span>,
+</span></span><span style="display:flex;"><span>                                    top<span style="color:#666">=</span><span style="color:#40a070">30</span>,
+</span></span><span style="display:flex;"><span>                                    title<span style="color:#666">=</span><span style="color:#4070a0">&#34;Cluster Labels Relative to Country&#34;</span>,
+</span></span><span style="display:flex;"><span>                                    width<span style="color:#666">=</span><span style="color:#40a070">1000</span>,
+</span></span><span style="display:flex;"><span>                                    height<span style="color:#666">=</span><span style="color:#40a070">800</span>
+</span></span><span style="display:flex;"><span>                                    )
+</span></span></code></pre></div><p><img src="/clustering_linkedin_profiles/output_63_0.png" alt="My Image Description"></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>visualize_top_15_category_histogram(overall_results,
+</span></span><span style="display:flex;"><span>                                    category_column<span style="color:#666">=</span><span style="color:#4070a0">&#34;education_title&#34;</span>,
+</span></span><span style="display:flex;"><span>                                    cluster_column<span style="color:#666">=</span><span style="color:#4070a0">&#34;cluster_scaled_string&#34;</span>,
+</span></span><span style="display:flex;"><span>                                    top<span style="color:#666">=</span><span style="color:#40a070">30</span>,
+</span></span><span style="display:flex;"><span>                                    title<span style="color:#666">=</span><span style="color:#4070a0">&#34;Cluster Labels Relative to Country&#34;</span>,
+</span></span><span style="display:flex;"><span>                                    width<span style="color:#666">=</span><span style="color:#40a070">1000</span>,
+</span></span><span style="display:flex;"><span>                                    height<span style="color:#666">=</span><span style="color:#40a070">800</span>
+</span></span><span style="display:flex;"><span>                                    )
+</span></span></code></pre></div><p><img src="/clustering_linkedin_profiles/output_64_0.png" alt="My Image Description"></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>visualize_top_15_category_histogram(overall_results,
+</span></span><span style="display:flex;"><span>                                    category_column<span style="color:#666">=</span><span style="color:#4070a0">&#34;education_subtitle&#34;</span>,
+</span></span><span style="display:flex;"><span>                                    cluster_column<span style="color:#666">=</span><span style="color:#4070a0">&#34;cluster_scaled_string&#34;</span>,
+</span></span><span style="display:flex;"><span>                                    top<span style="color:#666">=</span><span style="color:#40a070">30</span>,
+</span></span><span style="display:flex;"><span>                                    title<span style="color:#666">=</span><span style="color:#4070a0">&#34;Cluster Labels Relative to Education&#34;</span>,
+</span></span><span style="display:flex;"><span>                                    width<span style="color:#666">=</span><span style="color:#40a070">1000</span>,
+</span></span><span style="display:flex;"><span>                                    height<span style="color:#666">=</span><span style="color:#40a070">800</span>
+</span></span><span style="display:flex;"><span>                                    )
+</span></span></code></pre></div><p><img src="/clustering_linkedin_profiles/output_65_0.png" alt="My Image Description"></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>visualize_top_15_category_histogram(overall_results,
+</span></span><span style="display:flex;"><span>                                    category_column<span style="color:#666">=</span><span style="color:#4070a0">&#34;experience_title&#34;</span>,
+</span></span><span style="display:flex;"><span>                                    cluster_column<span style="color:#666">=</span><span style="color:#4070a0">&#34;cluster_scaled_string&#34;</span>,
+</span></span><span style="display:flex;"><span>                                    top<span style="color:#666">=</span><span style="color:#40a070">100</span>,
+</span></span><span style="display:flex;"><span>                                    title<span style="color:#666">=</span><span style="color:#4070a0">&#34;Cluster Labels Relative to Latest Experience Title&#34;</span>,
+</span></span><span style="display:flex;"><span>                                    width<span style="color:#666">=</span><span style="color:#40a070">1200</span>,
+</span></span><span style="display:flex;"><span>                                    height<span style="color:#666">=</span><span style="color:#40a070">800</span>
+</span></span><span style="display:flex;"><span>                                    )
+</span></span></code></pre></div><p><img src="/clustering_linkedin_profiles/output_66_0.png" alt="My Image Description"></p>
+<div class="highlight"><pre tabindex="0" style="background-color:#f0f0f0;-moz-tab-size:2;-o-tab-size:2;tab-size:2;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>overall_results<span style="color:#666">.</span>to_csv(<span style="color:#4070a0">&#34;Clean Data/overall_results.csv&#34;</span>,index<span style="color:#666">=</span><span style="color:#007020;font-weight:bold">False</span>)
+</span></span></code></pre></div><h3 id="observations">Observations:</h3>
+<p class="justify-text"><ul>
+<li>By squishing together the big, complex text features, K-means did a pretty solid job. With a Distortion Score of 152 and a Silhouette Score of 0.5201, we think it&rsquo;s a good place to start.</li>
+<li>We can probably make the clusters even better if we pull in more info like recommendations, education, and job history.</li>
+<li>The model seems to be pretty good at putting employees from the same industries together. Take a look at cluster 2 - it grouped retail and furniture folks together.</li>
+<li>In terms of where people are from, the model&rsquo;s done a good job. It&rsquo;s been putting places from the same country together, like Israel and its districts and cities in cluster 0, and it did the same with US cities in cluster 1. This kind of data looks like it&rsquo;d work well with hierarchy-based models like HDBSCAN.</li>
+<li>One thing to note is that the model likes to stick all the empty values or &ldquo;none&rdquo; or &ldquo;other&rdquo; categories together, mostly because they look alike when transformed into vectors. To steer clear of this, I decided to leave them out.</li>
+<li>Just a heads-up that I used K-means here, which is pretty simple and can be thrown off by outliers. In the future, it could be worth making a fancier model that&rsquo;s tougher against outliers.</li>
+</ul>
+</p>
+
+</div>
+    </article>
+  </main>
+
+    </div>
+    <footer>
+  <hr />
+  
+    <p id="social">
+      Find me around the web:
+      <br />
+      
+        
+        <a href="https://github.com/AHMED-ALTAKROURI">GitHub</a>
+      
+         | 
+        <a href="https://twitter.com/ahmedtakrouri">Twitter</a>
+      
+         | 
+        <a href="https://www.linkedin.com/in/ahmed-altakrouri-7422b185/">Linkedin</a>
+      
+    </p>
+  
+  <p class="copyright">
+    Copyright © 2023
+    <a href="https://ahmed-altakrouri.github.io/"><strong>Ahmed Al-takrouri</strong></a>.
+
+
+  </p>
+  <p class="builtWith">
+
+
+
+
+
+
+
+</footer>
+
+  </body>
+</html>

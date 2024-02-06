@@ -1,0 +1,2050 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta
+    name="description"
+    content=""
+  />
+  
+    
+      <title>Profit Forecasting Profit | Probabilistic Thinking</title>
+    
+  
+  <link rel="stylesheet" href="/css/reset.css"/>
+  <link rel="stylesheet" href="/css/font.css"/>
+  <link rel="stylesheet" href="/css/smigle.css"/>
+  
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+  <meta name="msapplication-TileColor" content="#da532c">
+  <meta name="theme-color" content="#ffffff">
+</head>
+
+  <body>
+    <header>
+  <div id="brand">
+    <a class="icon-link" href="https://ahmed-altakrouri.github.io/">
+      <img
+        class="icon"
+        src="/images/brandIcon.svg"
+      />
+    </a>
+    <div class="text">
+      <a href="https://ahmed-altakrouri.github.io/"><h1>Probabilistic Thinking</h1></a>
+      <h3>Ideas and thoughts on machine learning, data science, and statistics</h3>
+    </div>
+  </div>
+  <nav>
+    
+      
+        
+        <a href="/"><b>Home</b></a>
+      
+         | 
+        <a href="/about/"><b>About</b></a>
+      
+         | 
+        <a href="/posts/"><b>Posts</b></a>
+      
+         | 
+        <a href="/categories/"><b>Categories</b></a>
+      
+         | 
+        <a href="/tags/"><b>Tags</b></a>
+      
+    
+  </nav>
+  <hr />
+</header>
+
+    <div id="content">
+      
+  <main>
+    <article>
+      <h1>Profit Forecasting Profit</h1>
+      <div class="post-meta">
+  <strong>
+    <span>Posted on</span>
+    <time>2022-04-15</time>
+    
+    
+  </strong>
+  <span> • 6542 words</span>
+  <span> • 31 minute read</span>
+  
+  
+</div>
+
+      <div><h3 id="overview">Overview:</h3>
+<p>This notebook aimed is to demonstrate the solution for simple regression problem, predict net profit given a set of attributes, first I start with simple EDA understand the data numerical and categorical distributions. Then I fit simple statistical model followed by linear regression and more complex one. each model includes scoring metrics and explanations.
+Finally, I communicate final finding of prediction of the provided Out-of-sample test set and the including factors or attributes that decided the final predictions using shapley values.</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">%</span>matplotlib inline
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> warnings
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># data wrangling:</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> pandas <span style="color:#66d9ef">as</span> pd
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># visualizations:</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> plotly.express <span style="color:#66d9ef">as</span> px
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> plotly.graph_objects <span style="color:#66d9ef">as</span> go
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> seaborn <span style="color:#66d9ef">as</span> sns
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> matplotlib <span style="color:#f92672">import</span> pyplot <span style="color:#66d9ef">as</span> plt
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># modeling:</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> sklearn.linear_model <span style="color:#f92672">import</span> LinearRegression
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> statsmodels.regression.linear_model <span style="color:#f92672">import</span> OLS
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># metrics:</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> sklearn.model_selection <span style="color:#f92672">import</span> train_test_split
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> sklearn.model_selection <span style="color:#f92672">import</span> StratifiedKFold
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># model diagnosis:</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> yellowbrick.model_selection <span style="color:#f92672">import</span> learning_curve
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> yellowbrick.regressor <span style="color:#f92672">import</span> ResidualsPlot
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Interpretable Machine Learning:</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> shap
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># helper functions I wrote for this dataset:</span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> utils <span style="color:#f92672">import</span> <span style="color:#f92672">*</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> warnings
+</span></span><span style="display:flex;"><span>warnings<span style="color:#f92672">.</span>filterwarnings(<span style="color:#e6db74">&#39;ignore&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> matplotlib.pyplot <span style="color:#66d9ef">as</span> plt
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> seaborn <span style="color:#66d9ef">as</span> sns
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> matplotlib.pyplot <span style="color:#66d9ef">as</span> plt
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> seaborn <span style="color:#66d9ef">as</span> sns
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Settings and aesthetics:</span>
+</span></span><span style="display:flex;"><span>cmap_data <span style="color:#f92672">=</span> plt<span style="color:#f92672">.</span>cm<span style="color:#f92672">.</span>Paired
+</span></span><span style="display:flex;"><span>cmap_cv <span style="color:#f92672">=</span> plt<span style="color:#f92672">.</span>cm<span style="color:#f92672">.</span>coolwarm
+</span></span><span style="display:flex;"><span>cmap_data <span style="color:#f92672">=</span> plt<span style="color:#f92672">.</span>cm<span style="color:#f92672">.</span>Paired
+</span></span><span style="display:flex;"><span>cmap_cv <span style="color:#f92672">=</span> plt<span style="color:#f92672">.</span>cm<span style="color:#f92672">.</span>coolwarm
+</span></span><span style="display:flex;"><span>warnings<span style="color:#f92672">.</span>filterwarnings(<span style="color:#e6db74">&#39;ignore&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Some basic settings here:</span>
+</span></span><span style="display:flex;"><span>pd<span style="color:#f92672">.</span>set_option(<span style="color:#e6db74">&#39;display.max_rows&#39;</span>, <span style="color:#ae81ff">500</span>)
+</span></span><span style="display:flex;"><span>pd<span style="color:#f92672">.</span>set_option(<span style="color:#e6db74">&#39;display.max_columns&#39;</span>, <span style="color:#ae81ff">500</span>)
+</span></span><span style="display:flex;"><span>pd<span style="color:#f92672">.</span>set_option(<span style="color:#e6db74">&#39;display.width&#39;</span>, <span style="color:#ae81ff">1000</span>)
+</span></span><span style="display:flex;"><span>pd<span style="color:#f92672">.</span>options<span style="color:#f92672">.</span>display<span style="color:#f92672">.</span>max_columns <span style="color:#f92672">=</span> <span style="color:#ae81ff">30</span>
+</span></span></code></pre></div><ol>
+<li>Basic EDA.</li>
+<li>Feature Engineering.</li>
+<li>Statistical Model.</li>
+<li>baseline Model</li>
+<li>Complex Model.
+Scoring.</li>
+<li>SHAPly Values, Interoperable ML.</li>
+</ol>
+<h3 id="eda">EDA</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>modeling_data <span style="color:#f92672">=</span> pd<span style="color:#f92672">.</span>read_csv(<span style="color:#e6db74">&#34;../../Data/labeled_dataset.csv&#34;</span>)
+</span></span><span style="display:flex;"><span>modeling_data<span style="color:#f92672">.</span>set_index(<span style="color:#e6db74">&#34;index&#34;</span>, inplace<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>modeling_data<span style="color:#f92672">.</span>head()
+</span></span></code></pre></div><!-- raw HTML omitted -->
+<pre><code>.dataframe tbody tr th {
+    vertical-align: top;
+}
+
+.dataframe thead th {
+    text-align: right;
+}
+</code></pre>
+<p><!-- raw HTML omitted --></p>
+<!-- raw HTML omitted -->
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>modeling_data<span style="color:#f92672">.</span>describe()
+</span></span></code></pre></div><!-- raw HTML omitted -->
+<pre><code>.dataframe tbody tr th {
+    vertical-align: top;
+}
+
+.dataframe thead th {
+    text-align: right;
+}
+</code></pre>
+<p><!-- raw HTML omitted --></p>
+<!-- raw HTML omitted -->
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>modeling_data<span style="color:#f92672">.</span>info()
+</span></span></code></pre></div><pre><code>&lt;class 'pandas.core.frame.DataFrame'&gt;
+Int64Index: 1000 entries, 0 to 999
+Data columns (total 13 columns):
+ #   Column                   Non-Null Count  Dtype  
+---  ------                   --------------  -----  
+ 0   Age                      983 non-null    float64
+ 1   Monthly premium          989 non-null    float64
+ 2   Socioeconomic category   1000 non-null   object 
+ 3   Monthly kilometers       1000 non-null   int64  
+ 4   Coefficient bonus malus  1000 non-null   int64  
+ 5   Vehicle type             1000 non-null   object 
+ 6   CRM score                1000 non-null   int64  
+ 7   Standard of living       1000 non-null   int64  
+ 8   Brand                    948 non-null    object 
+ 9   Yearly income            1000 non-null   int64  
+ 10  Credit score             1000 non-null   int64  
+ 11  Yearly maintenance cost  1000 non-null   int64  
+ 12  Net profit               1000 non-null   float64
+dtypes: float64(3), int64(7), object(3)
+memory usage: 109.4+ KB
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>modeling_data<span style="color:#f92672">.</span>isnull()<span style="color:#f92672">.</span>sum()<span style="color:#f92672">.</span>to_frame()<span style="color:#f92672">.</span>style<span style="color:#f92672">.</span>background_gradient(cmap<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;summer&#39;</span>)
+</span></span></code></pre></div><!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># fill nan with other Brand types:</span>
+</span></span><span style="display:flex;"><span>modeling_data[<span style="color:#e6db74">&#34;Brand&#34;</span>]<span style="color:#f92672">.</span>fillna(<span style="color:#e6db74">&#34;other&#34;</span>, inplace<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>)
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>modeling_data <span style="color:#f92672">=</span> modeling_data[modeling_data[<span style="color:#e6db74">&#34;Monthly premium&#34;</span>]<span style="color:#f92672">.</span>notna()]
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>modeling_data<span style="color:#f92672">.</span>columns<span style="color:#f92672">.</span>tolist()
+</span></span></code></pre></div><pre><code>['Age',
+ 'Monthly premium',
+ 'Socioeconomic category',
+ 'Monthly kilometers',
+ 'Coefficient bonus malus',
+ 'Vehicle type',
+ 'CRM score',
+ 'Standard of living',
+ 'Brand',
+ 'Yearly income',
+ 'Credit score',
+ 'Yearly maintenance cost',
+ 'Net profit']
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># create histogram here for categorical variables:</span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>figure(figsize<span style="color:#f92672">=</span>(<span style="color:#ae81ff">10</span>,<span style="color:#ae81ff">6</span>))
+</span></span><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>set(style<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;whitegrid&#34;</span>, font_scale<span style="color:#f92672">=</span><span style="color:#ae81ff">1.2</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>chart <span style="color:#f92672">=</span> sns<span style="color:#f92672">.</span>countplot(x<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;Brand&#39;</span>, hue<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;Socioeconomic category&#39;</span>, data<span style="color:#f92672">=</span>modeling_data, palette<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;deep&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Update layout parameters</span>
+</span></span><span style="display:flex;"><span>chart<span style="color:#f92672">.</span>set_title(<span style="color:#e6db74">&#39;Histogram for Categorical Variables&#39;</span>, fontsize<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>, color<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;firebrick&#39;</span>)
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Show the plot</span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>show()
+</span></span></code></pre></div><p><img src="output_13_0.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># set the style and figure size</span>
+</span></span><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>set(style<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;whitegrid&#34;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>figure(figsize<span style="color:#f92672">=</span>(<span style="color:#ae81ff">11</span>,<span style="color:#ae81ff">7</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># create the countplot</span>
+</span></span><span style="display:flex;"><span>chart <span style="color:#f92672">=</span> sns<span style="color:#f92672">.</span>countplot(x<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;Brand&#39;</span>, hue<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;Vehicle type&#39;</span>, data<span style="color:#f92672">=</span>modeling_data, palette<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;deep&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># update layout parameters</span>
+</span></span><span style="display:flex;"><span>chart<span style="color:#f92672">.</span>set_title(<span style="color:#e6db74">&#39;Countplot for Categorical Variables&#39;</span>, fontsize<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>, color<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;firebrick&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Show the plot</span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>show()
+</span></span></code></pre></div><p><img src="output_14_0.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>modeling_data<span style="color:#f92672">.</span>groupby([<span style="color:#e6db74">&#39;Socioeconomic category&#39;</span>, <span style="color:#e6db74">&#39;Vehicle type&#39;</span>, <span style="color:#e6db74">&#39;Brand&#39;</span>])[<span style="color:#e6db74">&#39;Vehicle type&#39;</span>]<span style="color:#f92672">.</span>count()
+</span></span></code></pre></div><pre><code>Socioeconomic category  Vehicle type  Brand     
+Labor worker            3 doors       Citroen       13
+                                      Opel           4
+                                      Peugeot       14
+                                      Renault       10
+                                      Toyota         3
+                                      Volkswagen     7
+                        5 doors       Citroen       16
+                                      Opel           3
+                                      Peugeot       33
+                                      Renault       12
+                                      Toyota         2
+                                      Volkswagen     9
+                                      other          3
+                        SUV           Citroen       12
+                                      Opel           5
+                                      Peugeot       23
+                                      Renault       13
+                                      Toyota         6
+                                      Volkswagen     5
+                                      other          3
+                        utility       Citroen        2
+                                      Opel           1
+                                      Peugeot        5
+                                      Renault        6
+                                      Toyota         3
+                                      Volkswagen     2
+                                      other          1
+Office worker           3 doors       Citroen       13
+                                      Opel           7
+                                      Peugeot       14
+                                      Renault       21
+                                      Toyota        11
+                                      Volkswagen     7
+                                      other          6
+                        5 doors       Citroen       23
+                                      Opel           4
+                                      Peugeot       33
+                                      Renault       38
+                                      Toyota         9
+                                      Volkswagen    12
+                                      other         10
+                        SUV           Citroen       24
+                                      Opel           8
+                                      Peugeot       19
+                                      Renault       28
+                                      Toyota        12
+                                      Volkswagen    11
+                                      other          5
+                        utility       Citroen        5
+                                      Peugeot       10
+                                      Renault        9
+                                      Toyota         1
+                                      Volkswagen     2
+Self employed           3 doors       Citroen        3
+                                      Opel           1
+                                      Peugeot        1
+                                      Renault        2
+                                      Toyota         3
+                                      Volkswagen     1
+                        5 doors       Citroen        6
+                                      Opel           1
+                                      Peugeot        4
+                                      Renault        5
+                                      Toyota         1
+                                      Volkswagen     2
+                                      other          1
+                        SUV           Citroen        4
+                                      Peugeot        3
+                                      Renault        2
+                                      Toyota         3
+                                      Volkswagen     1
+                                      other          2
+                        utility       Citroen        1
+                                      Peugeot        2
+                                      Volkswagen     1
+Student                 3 doors       Citroen       12
+                                      Peugeot       16
+                                      Renault       13
+                                      Toyota         3
+                                      Volkswagen     8
+                                      other          3
+                        5 doors       Citroen       13
+                                      Opel           6
+                                      Peugeot       37
+                                      Renault       30
+                                      Toyota         7
+                                      Volkswagen    10
+                                      other          3
+                        SUV           Citroen       21
+                                      Opel           3
+                                      Peugeot       26
+                                      Renault       22
+                                      Toyota        14
+                                      Volkswagen    13
+                                      other          9
+                        utility       Citroen        5
+                                      Peugeot        2
+                                      Renault        5
+                                      Toyota         2
+                                      Volkswagen     4
+                                      other          1
+Unemployed              3 doors       Citroen        9
+                                      Opel           1
+                                      Peugeot        7
+                                      Renault        3
+                                      Volkswagen     4
+                                      other          2
+                        5 doors       Citroen        6
+                                      Opel           2
+                                      Peugeot       14
+                                      Renault        8
+                                      Toyota         5
+                                      Volkswagen     6
+                                      other          1
+                        SUV           Citroen        3
+                                      Peugeot        5
+                                      Renault        2
+                                      Toyota         1
+                                      Volkswagen     5
+                                      other          1
+                        utility       Citroen        3
+                                      Opel           1
+                                      Renault        1
+                                      Toyota         1
+                                      Volkswagen     2
+Name: Vehicle type, dtype: int64
+</code></pre>
+<p>There are few extreme outliers in the data, we might suspect a data entry problem:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Create a larger figure</span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>figure(figsize<span style="color:#f92672">=</span>(<span style="color:#ae81ff">11</span>,<span style="color:#ae81ff">7</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Create boxplots for each variable</span>
+</span></span><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>boxplot(data<span style="color:#f92672">=</span>modeling_data[[<span style="color:#e6db74">&#34;Age&#34;</span>, <span style="color:#e6db74">&#34;Monthly premium&#34;</span>, <span style="color:#e6db74">&#34;Coefficient bonus malus&#34;</span>, <span style="color:#e6db74">&#34;CRM score&#34;</span>, <span style="color:#e6db74">&#34;Net profit&#34;</span>]])
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Set plot title and labels</span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>title(<span style="color:#e6db74">&#39;Boxplots for Selected Variables&#39;</span>, fontsize<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>, color<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;firebrick&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Show the plot</span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>show()
+</span></span></code></pre></div><p><img src="output_17_0.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># drop extreme outlier from the above observations:</span>
+</span></span><span style="display:flex;"><span>modeling_data <span style="color:#f92672">=</span> modeling_data[modeling_data[<span style="color:#e6db74">&#34;CRM score&#34;</span>] <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">254</span>]
+</span></span><span style="display:flex;"><span>modeling_data <span style="color:#f92672">=</span> modeling_data[(modeling_data[<span style="color:#e6db74">&#34;Age&#34;</span>] <span style="color:#f92672">&lt;</span> <span style="color:#ae81ff">124</span>) <span style="color:#f92672">&amp;</span> (modeling_data[<span style="color:#e6db74">&#34;Age&#34;</span>] <span style="color:#f92672">&gt;</span> <span style="color:#ae81ff">0</span>)]
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># no warning outlier for credit score, monthly kilometers and yearly maintenance cost:</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Create a larger figure</span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>figure(figsize<span style="color:#f92672">=</span>(<span style="color:#ae81ff">11</span>,<span style="color:#ae81ff">7</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Create boxplots for each variable</span>
+</span></span><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>boxplot(data<span style="color:#f92672">=</span>modeling_data[[<span style="color:#e6db74">&#34;Monthly kilometers&#34;</span>, <span style="color:#e6db74">&#34;Credit score&#34;</span>]])
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Set plot title and labels</span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>title(<span style="color:#e6db74">&#39;Boxplots for Selected Variables&#39;</span>, fontsize<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>, color<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;firebrick&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># remove background color</span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>grid(<span style="color:#66d9ef">False</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Show the plot</span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>show()
+</span></span></code></pre></div><p><img src="output_19_0.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Create a larger figure</span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>figure(figsize<span style="color:#f92672">=</span>(<span style="color:#ae81ff">11</span>,<span style="color:#ae81ff">7</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Create boxplot for the variable</span>
+</span></span><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>boxplot(x<span style="color:#f92672">=</span>modeling_data[<span style="color:#e6db74">&#34;Yearly maintenance cost&#34;</span>], color<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;aqua&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Set plot title and labels</span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>title(<span style="color:#e6db74">&#39;Boxplot for Yearly Maintenance Cost&#39;</span>, fontsize<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>, color<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;firebrick&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># remove background color</span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Show the plot</span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>show()
+</span></span></code></pre></div><p><img src="output_20_0.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Create a larger figure</span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>figure(figsize<span style="color:#f92672">=</span>(<span style="color:#ae81ff">11</span>,<span style="color:#ae81ff">7</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Create boxplot for the variable</span>
+</span></span><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>boxplot(x<span style="color:#f92672">=</span>modeling_data[<span style="color:#e6db74">&#34;Yearly income&#34;</span>], color<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;lightseagreen&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Set plot title and labels</span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>title(<span style="color:#e6db74">&#39;Boxplot for Yearly Income&#39;</span>, fontsize<span style="color:#f92672">=</span><span style="color:#ae81ff">16</span>, color<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;firebrick&#39;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># Show the plot</span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>show()
+</span></span></code></pre></div><p><img src="output_21_0.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>set(style<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;whitegrid&#34;</span>, font_scale<span style="color:#f92672">=</span><span style="color:#ae81ff">1.2</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>figure(figsize<span style="color:#f92672">=</span>(<span style="color:#ae81ff">8</span>, <span style="color:#ae81ff">5</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>boxplot(x<span style="color:#f92672">=</span>modeling_data[<span style="color:#e6db74">&#34;Standard of living&#34;</span>])
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>xlabel(<span style="color:#e6db74">&#34;Standard of living&#34;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>ylabel(<span style="color:#e6db74">&#34;Values&#34;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>title(<span style="color:#e6db74">&#34;Box Plot - Standard of living&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>show()
+</span></span></code></pre></div><p><img src="output_22_0.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>set(style<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;whitegrid&#34;</span>, font_scale<span style="color:#f92672">=</span><span style="color:#ae81ff">1.2</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>figure(figsize<span style="color:#f92672">=</span>(<span style="color:#ae81ff">8</span>, <span style="color:#ae81ff">6</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>histplot(data<span style="color:#f92672">=</span>modeling_data, x<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Yearly income&#34;</span>, hue<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Socioeconomic category&#34;</span>, multiple<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;stack&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>xlabel(<span style="color:#e6db74">&#34;Yearly income&#34;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>ylabel(<span style="color:#e6db74">&#34;Count&#34;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>title(<span style="color:#e6db74">&#34;Yearly income per Socioeconomic Category&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>show()
+</span></span></code></pre></div><p><img src="output_23_0.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>set(style<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;whitegrid&#34;</span>, font_scale<span style="color:#f92672">=</span><span style="color:#ae81ff">1.2</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>figure(figsize<span style="color:#f92672">=</span>(<span style="color:#ae81ff">8</span>, <span style="color:#ae81ff">6</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>histplot(data<span style="color:#f92672">=</span>modeling_data, x<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Yearly income&#34;</span>, hue<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Vehicle type&#34;</span>, multiple<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;stack&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>xlabel(<span style="color:#e6db74">&#34;Yearly income&#34;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>ylabel(<span style="color:#e6db74">&#34;Count&#34;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>title(<span style="color:#e6db74">&#34;Vehicle Type Per Yearly Income&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>show()
+</span></span></code></pre></div><p><img src="output_24_0.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>set(style<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;whitegrid&#34;</span>, font_scale<span style="color:#f92672">=</span><span style="color:#ae81ff">1.2</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>figure(figsize<span style="color:#f92672">=</span>(<span style="color:#ae81ff">8</span>, <span style="color:#ae81ff">5</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>boxplot(x<span style="color:#f92672">=</span>modeling_data[<span style="color:#e6db74">&#34;Standard of living&#34;</span>])
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>xlabel(<span style="color:#e6db74">&#34;Standard of living&#34;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>ylabel(<span style="color:#e6db74">&#34;Values&#34;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>title(<span style="color:#e6db74">&#34;Box Plot - Standard of living&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>show()
+</span></span></code></pre></div><p><img src="output_25_0.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>set(style<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;whitegrid&#34;</span>, font_scale<span style="color:#f92672">=</span><span style="color:#ae81ff">1.2</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>figure(figsize<span style="color:#f92672">=</span>(<span style="color:#ae81ff">8</span>, <span style="color:#ae81ff">6</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>histplot(data<span style="color:#f92672">=</span>modeling_data, x<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Yearly income&#34;</span>, hue<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Socioeconomic category&#34;</span>, element<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;step&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>xlabel(<span style="color:#e6db74">&#34;Yearly income&#34;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>ylabel(<span style="color:#e6db74">&#34;Count&#34;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>title(<span style="color:#e6db74">&#34;Yearly income per Socioeconomic Category&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>show()
+</span></span></code></pre></div><p><img src="output_26_0.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>set(style<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;whitegrid&#34;</span>, font_scale<span style="color:#f92672">=</span><span style="color:#ae81ff">1.2</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>figure(figsize<span style="color:#f92672">=</span>(<span style="color:#ae81ff">8</span>, <span style="color:#ae81ff">6</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>histplot(data<span style="color:#f92672">=</span>modeling_data, x<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Yearly income&#34;</span>, hue<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Vehicle type&#34;</span>, multiple<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;stack&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>xlabel(<span style="color:#e6db74">&#34;Yearly income&#34;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>ylabel(<span style="color:#e6db74">&#34;Count&#34;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>title(<span style="color:#e6db74">&#34;Vehicle Type Per Yearly Income&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>show()
+</span></span></code></pre></div><p><img src="output_27_0.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>set(style<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;whitegrid&#34;</span>, font_scale<span style="color:#f92672">=</span><span style="color:#ae81ff">1.2</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>figure(figsize<span style="color:#f92672">=</span>(<span style="color:#ae81ff">8</span>, <span style="color:#ae81ff">5</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>histplot(data<span style="color:#f92672">=</span>modeling_data, x<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Yearly income&#34;</span>, hue<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Brand&#34;</span>, multiple<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;stack&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>xlabel(<span style="color:#e6db74">&#34;Yearly income&#34;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>ylabel(<span style="color:#e6db74">&#34;Count&#34;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>title(<span style="color:#e6db74">&#34;Brand Type Per Yearly Income&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>show()
+</span></span></code></pre></div><p><img src="output_28_0.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>set(style<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;whitegrid&#34;</span>, font_scale<span style="color:#f92672">=</span><span style="color:#ae81ff">1.2</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>figure(figsize<span style="color:#f92672">=</span>(<span style="color:#ae81ff">8</span>, <span style="color:#ae81ff">5</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>histplot(data<span style="color:#f92672">=</span>modeling_data, x<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Net profit&#34;</span>, hue<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Socioeconomic category&#34;</span>, multiple<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;stack&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>xlabel(<span style="color:#e6db74">&#34;Net profit&#34;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>ylabel(<span style="color:#e6db74">&#34;Count&#34;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>title(<span style="color:#e6db74">&#34;Net Profit per Socioeconomic Category&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>show()
+</span></span></code></pre></div><p><img src="output_29_0.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>set(style<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;whitegrid&#34;</span>, font_scale<span style="color:#f92672">=</span><span style="color:#ae81ff">1.2</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>figure(figsize<span style="color:#f92672">=</span>(<span style="color:#ae81ff">8</span>, <span style="color:#ae81ff">5</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>histplot(data<span style="color:#f92672">=</span>modeling_data, x<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Net profit&#34;</span>, hue<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Vehicle type&#34;</span>, multiple<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;stack&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>xlabel(<span style="color:#e6db74">&#34;Net profit&#34;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>ylabel(<span style="color:#e6db74">&#34;Count&#34;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>title(<span style="color:#e6db74">&#34;Net Profit Distribution Per Vehicle Type&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>show()
+</span></span></code></pre></div><p><img src="output_30_0.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>set(style<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;whitegrid&#34;</span>, font_scale<span style="color:#f92672">=</span><span style="color:#ae81ff">1.2</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>figure(figsize<span style="color:#f92672">=</span>(<span style="color:#ae81ff">8</span>, <span style="color:#ae81ff">5</span>))
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>histplot(data<span style="color:#f92672">=</span>modeling_data, x<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Net profit&#34;</span>, hue<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;Brand&#34;</span>, multiple<span style="color:#f92672">=</span><span style="color:#e6db74">&#34;stack&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>xlabel(<span style="color:#e6db74">&#34;Net profit&#34;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>ylabel(<span style="color:#e6db74">&#34;Count&#34;</span>)
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>title(<span style="color:#e6db74">&#34;Net Profit per Brand&#34;</span>)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>show()
+</span></span></code></pre></div><p><img src="output_31_0.png" alt="png"></p>
+<h3 id="observation">Observation</h3>
+<ul>
+<li>No warning outliers seen in the data except for yearly income, CRM score and Age.</li>
+<li>Numerical data are normally distributed.</li>
+</ul>
+<h4 id="encode-categorical-variables-and-clean-data-for-modeling">Encode categorical variables and clean data for modeling:</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># categorize your variables here:</span>
+</span></span><span style="display:flex;"><span>categories <span style="color:#f92672">=</span> [
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;Brand&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;Vehicle type&#39;</span>,
+</span></span><span style="display:flex;"><span>    <span style="color:#e6db74">&#39;Socioeconomic category&#39;</span>,
+</span></span><span style="display:flex;"><span>]
+</span></span><span style="display:flex;"><span>modeling_data_visualization <span style="color:#f92672">=</span> pd<span style="color:#f92672">.</span>get_dummies(modeling_data,
+</span></span><span style="display:flex;"><span>                               columns<span style="color:#f92672">=</span>categories,
+</span></span><span style="display:flex;"><span>                               drop_first<span style="color:#f92672">=</span><span style="color:#66d9ef">False</span>)
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>modeling_data <span style="color:#f92672">=</span> pd<span style="color:#f92672">.</span>get_dummies(
+</span></span><span style="display:flex;"><span>                               modeling_data,
+</span></span><span style="display:flex;"><span>                               columns<span style="color:#f92672">=</span>categories,
+</span></span><span style="display:flex;"><span>                               drop_first<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>
+</span></span><span style="display:flex;"><span>                               )
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#75715e"># rearrange columns:</span>
+</span></span><span style="display:flex;"><span>ordered_corr_columns <span style="color:#f92672">=</span> modeling_data_visualization<span style="color:#f92672">.</span>copy()
+</span></span><span style="display:flex;"><span>ordered_corr_columns <span style="color:#f92672">=</span> ordered_corr_columns[[<span style="color:#e6db74">&#39;Age&#39;</span>,
+</span></span><span style="display:flex;"><span>                                             <span style="color:#e6db74">&#39;Monthly premium&#39;</span>,
+</span></span><span style="display:flex;"><span>                                             <span style="color:#e6db74">&#39;Monthly kilometers&#39;</span>,
+</span></span><span style="display:flex;"><span>                                             <span style="color:#e6db74">&#39;Coefficient bonus malus&#39;</span>,
+</span></span><span style="display:flex;"><span>                                             <span style="color:#e6db74">&#39;CRM score&#39;</span>,
+</span></span><span style="display:flex;"><span>                                             <span style="color:#e6db74">&#39;Standard of living&#39;</span>,
+</span></span><span style="display:flex;"><span>                                             <span style="color:#e6db74">&#39;Yearly income&#39;</span>,
+</span></span><span style="display:flex;"><span>                                             <span style="color:#e6db74">&#39;Credit score&#39;</span>,
+</span></span><span style="display:flex;"><span>                                             <span style="color:#e6db74">&#39;Yearly maintenance cost&#39;</span>,
+</span></span><span style="display:flex;"><span>                                             <span style="color:#e6db74">&#39;Brand_Citroen&#39;</span>,
+</span></span><span style="display:flex;"><span>                                             <span style="color:#e6db74">&#39;Brand_Opel&#39;</span>,
+</span></span><span style="display:flex;"><span>                                             <span style="color:#e6db74">&#39;Brand_Peugeot&#39;</span>,
+</span></span><span style="display:flex;"><span>                                             <span style="color:#e6db74">&#39;Brand_Renault&#39;</span>,
+</span></span><span style="display:flex;"><span>                                             <span style="color:#e6db74">&#39;Brand_Toyota&#39;</span>,
+</span></span><span style="display:flex;"><span>                                             <span style="color:#e6db74">&#39;Brand_Volkswagen&#39;</span>,
+</span></span><span style="display:flex;"><span>                                             <span style="color:#e6db74">&#39;Brand_other&#39;</span>,
+</span></span><span style="display:flex;"><span>                                             <span style="color:#e6db74">&#39;Vehicle type_3 doors&#39;</span>,
+</span></span><span style="display:flex;"><span>                                             <span style="color:#e6db74">&#39;Vehicle type_5 doors&#39;</span>,
+</span></span><span style="display:flex;"><span>                                             <span style="color:#e6db74">&#39;Vehicle type_SUV&#39;</span>,
+</span></span><span style="display:flex;"><span>                                             <span style="color:#e6db74">&#39;Vehicle type_utility&#39;</span>,
+</span></span><span style="display:flex;"><span>                                             <span style="color:#e6db74">&#39;Socioeconomic category_Labor worker&#39;</span>,
+</span></span><span style="display:flex;"><span>                                             <span style="color:#e6db74">&#39;Socioeconomic category_Office worker&#39;</span>,
+</span></span><span style="display:flex;"><span>                                             <span style="color:#e6db74">&#39;Socioeconomic category_Self employed&#39;</span>,
+</span></span><span style="display:flex;"><span>                                             <span style="color:#e6db74">&#39;Socioeconomic category_Student&#39;</span>,
+</span></span><span style="display:flex;"><span>                                             <span style="color:#e6db74">&#39;Socioeconomic category_Unemployed&#39;</span>,
+</span></span><span style="display:flex;"><span>                                             <span style="color:#e6db74">&#39;Net profit&#39;</span>
+</span></span><span style="display:flex;"><span>                                             ]]
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>figure(figsize<span style="color:#f92672">=</span>(<span style="color:#ae81ff">15</span>, <span style="color:#ae81ff">15</span>))
+</span></span><span style="display:flex;"><span>corr <span style="color:#f92672">=</span> ordered_corr_columns<span style="color:#f92672">.</span>corr()
+</span></span><span style="display:flex;"><span>corr_top <span style="color:#f92672">=</span> corr<span style="color:#f92672">.</span>index
+</span></span><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>heatmap(modeling_data_visualization[corr_top]<span style="color:#f92672">.</span>corr(), vmax<span style="color:#f92672">=</span><span style="color:#ae81ff">1.0</span>, vmin<span style="color:#f92672">=-</span><span style="color:#ae81ff">1.0</span>, linewidths<span style="color:#f92672">=</span><span style="color:#ae81ff">0.1</span>, annot<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>, annot_kws<span style="color:#f92672">=</span>{<span style="color:#e6db74">&#34;size&#34;</span>: <span style="color:#ae81ff">8</span>},
+</span></span><span style="display:flex;"><span>            square<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>, cbar<span style="color:#f92672">=</span><span style="color:#66d9ef">False</span>);
+</span></span></code></pre></div><p><img src="output_37_0.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>corr <span style="color:#f92672">=</span> ordered_corr_columns<span style="color:#f92672">.</span>corr()
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>figure(figsize<span style="color:#f92672">=</span>(<span style="color:#ae81ff">15</span>, <span style="color:#ae81ff">15</span>))
+</span></span><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>heatmap(corr[(corr <span style="color:#f92672">&gt;=</span> <span style="color:#ae81ff">0.1</span>)], vmax<span style="color:#f92672">=</span><span style="color:#ae81ff">1.0</span>, vmin<span style="color:#f92672">=-</span><span style="color:#ae81ff">1.0</span>, linewidths<span style="color:#f92672">=</span><span style="color:#ae81ff">0.1</span>, annot<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>, annot_kws<span style="color:#f92672">=</span>{<span style="color:#e6db74">&#34;size&#34;</span>: <span style="color:#ae81ff">8</span>}, square<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>, cbar<span style="color:#f92672">=</span><span style="color:#66d9ef">False</span>)
+</span></span></code></pre></div><pre><code>&lt;Axes: &gt;
+</code></pre>
+<p><img src="output_38_1.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>corr <span style="color:#f92672">=</span> ordered_corr_columns<span style="color:#f92672">.</span>corr()
+</span></span><span style="display:flex;"><span>plt<span style="color:#f92672">.</span>figure(figsize<span style="color:#f92672">=</span>(<span style="color:#ae81ff">15</span>, <span style="color:#ae81ff">15</span>))
+</span></span><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>heatmap(corr[(corr <span style="color:#f92672">&lt;=</span> <span style="color:#f92672">-</span><span style="color:#ae81ff">0.1</span>)], vmax<span style="color:#f92672">=</span><span style="color:#ae81ff">1.0</span>, vmin<span style="color:#f92672">=-</span><span style="color:#ae81ff">1.0</span>, linewidths<span style="color:#f92672">=</span><span style="color:#ae81ff">0.1</span>, annot<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>, annot_kws<span style="color:#f92672">=</span>{<span style="color:#e6db74">&#34;size&#34;</span>: <span style="color:#ae81ff">8</span>}, square<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>, cbar<span style="color:#f92672">=</span><span style="color:#66d9ef">False</span>);
+</span></span></code></pre></div><p><img src="output_39_0.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>fig, ax <span style="color:#f92672">=</span> plt<span style="color:#f92672">.</span>subplots(figsize<span style="color:#f92672">=</span>(<span style="color:#ae81ff">8</span>, <span style="color:#ae81ff">8</span>))
+</span></span><span style="display:flex;"><span>sns<span style="color:#f92672">.</span>heatmap(modeling_data_visualization<span style="color:#f92672">.</span>corr()[[<span style="color:#e6db74">&#34;Net profit&#34;</span>]]<span style="color:#f92672">.</span>sort_values(<span style="color:#e6db74">&#34;Net profit&#34;</span>), vmax<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>, vmin<span style="color:#f92672">=-</span><span style="color:#ae81ff">1</span>, annot<span style="color:#f92672">=</span><span style="color:#66d9ef">True</span>, ax<span style="color:#f92672">=</span>ax)
+</span></span><span style="display:flex;"><span>ax<span style="color:#f92672">.</span>invert_yaxis()
+</span></span></code></pre></div><p><img src="output_40_0.png" alt="png"></p>
+<h3 id="observation-1">Observation</h3>
+<ul>
+<li>There is not any warning high correlation between target variable and independent variables.</li>
+<li>Multicollinearity between Standard of living and yearly income, CRM score and Coefficient bonus malus, they might be problematic for linear models interpretation.</li>
+<li>There are few independent variables can be used for fitting model that correlate positively/negatively with Net profit.</li>
+<li>There is enough signals in the data simple model with fewer coefficient would generalize on unseen data.</li>
+</ul>
+<h3 id="simple-model">Simple Model:</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>Features <span style="color:#f92672">=</span> modeling_data<span style="color:#f92672">.</span>columns<span style="color:#f92672">.</span>tolist()
+</span></span><span style="display:flex;"><span>Features<span style="color:#f92672">.</span>remove(<span style="color:#e6db74">&#34;Net profit&#34;</span>)
+</span></span><span style="display:flex;"><span>Ys <span style="color:#f92672">=</span> modeling_data[<span style="color:#e6db74">&#34;Net profit&#34;</span>]
+</span></span><span style="display:flex;"><span>Xs <span style="color:#f92672">=</span> modeling_data[Features]
+</span></span></code></pre></div><p>Multicollinearity Check VIF:</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>calculate_vif(Xs)<span style="color:#f92672">.</span>style<span style="color:#f92672">.</span>background_gradient(cmap<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;summer&#39;</span>)
+</span></span></code></pre></div><!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>fixed_Xs <span style="color:#f92672">=</span> Xs<span style="color:#f92672">.</span>drop([<span style="color:#e6db74">&#34;Standard of living&#34;</span>, <span style="color:#e6db74">&#34;Coefficient bonus malus&#34;</span>,<span style="color:#e6db74">&#34;CRM score&#34;</span>,<span style="color:#e6db74">&#34;Yearly maintenance cost&#34;</span>], axis<span style="color:#f92672">=</span><span style="color:#ae81ff">1</span>)
+</span></span><span style="display:flex;"><span>calculate_vif(fixed_Xs)<span style="color:#f92672">.</span>style<span style="color:#f92672">.</span>background_gradient(cmap<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;summer&#39;</span>)
+</span></span></code></pre></div><!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>simple_model <span style="color:#f92672">=</span> LinearRegression()<span style="color:#f92672">.</span>fit(fixed_Xs, Ys)
+</span></span><span style="display:flex;"><span>simple_model<span style="color:#f92672">.</span>score(fixed_Xs, Ys)
+</span></span></code></pre></div><pre><code>0.8834266631920002
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>coef <span style="color:#f92672">=</span> get_regressor_coefficients(simple_model, fixed_Xs<span style="color:#f92672">.</span>columns<span style="color:#f92672">.</span>tolist())
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>coefficient_plot(coef<span style="color:#f92672">.</span>values(), coef<span style="color:#f92672">.</span>keys())
+</span></span></code></pre></div><p><img src="output_49_0.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>est <span style="color:#f92672">=</span> OLS(Ys, Xs)<span style="color:#f92672">.</span>fit()
+</span></span><span style="display:flex;"><span>print(est<span style="color:#f92672">.</span>summary())
+</span></span></code></pre></div><pre><code>                                 OLS Regression Results                                
+=======================================================================================
+Dep. Variable:             Net profit   R-squared (uncentered):                   0.930
+Model:                            OLS   Adj. R-squared (uncentered):              0.929
+Method:                 Least Squares   F-statistic:                              569.0
+Date:                Sat, 24 Jun 2023   Prob (F-statistic):                        0.00
+Time:                        22:20:19   Log-Likelihood:                         -3203.3
+No. Observations:                 958   AIC:                                      6451.
+Df Residuals:                     936   BIC:                                      6558.
+Df Model:                          22                                                  
+Covariance Type:            nonrobust                                                  
+========================================================================================================
+                                           coef    std err          t      P&gt;|t|      [0.025      0.975]
+--------------------------------------------------------------------------------------------------------
+Age                                      0.2148      0.048      4.474      0.000       0.121       0.309
+Monthly premium                         -0.0320      0.017     -1.875      0.061      -0.066       0.002
+Monthly kilometers                       0.0072      0.001      7.597      0.000       0.005       0.009
+Coefficient bonus malus                 -0.0124      0.046     -0.270      0.787      -0.103       0.078
+CRM score                                0.0156      0.044      0.354      0.724      -0.071       0.102
+Standard of living                       0.0003      0.000      0.566      0.572      -0.001       0.001
+Yearly income                           -0.0003   6.95e-05     -3.946      0.000      -0.000      -0.000
+Credit score                            -0.0010      0.001     -1.340      0.181      -0.003       0.000
+Yearly maintenance cost                 -0.0139      0.002     -8.276      0.000      -0.017      -0.011
+Brand_Opel                              -1.5706      1.151     -1.364      0.173      -3.830       0.689
+Brand_Peugeot                           -1.7943      0.666     -2.694      0.007      -3.101      -0.487
+Brand_Renault                           -0.7600      0.683     -1.113      0.266      -2.100       0.580
+Brand_Toyota                            -1.7598      0.905     -1.943      0.052      -3.537       0.017
+Brand_Volkswagen                        -2.6734      0.830     -3.220      0.001      -4.303      -1.044
+Brand_other                             -2.2858      1.109     -2.062      0.039      -4.461      -0.110
+Vehicle type_5 doors                    18.3364      0.600     30.537      0.000      17.158      19.515
+Vehicle type_SUV                        37.8587      0.621     60.937      0.000      36.639      39.078
+Vehicle type_utility                    57.4583      0.921     62.415      0.000      55.652      59.265
+Socioeconomic category_Office worker    -0.2975      0.620     -0.480      0.631      -1.514       0.919
+Socioeconomic category_Self employed    -1.5587      1.130     -1.379      0.168      -3.776       0.659
+Socioeconomic category_Student           3.5937      0.633      5.676      0.000       2.351       4.836
+Socioeconomic category_Unemployed        3.9310      0.887      4.431      0.000       2.190       5.672
+==============================================================================
+Omnibus:                       15.750   Durbin-Watson:                   1.959
+Prob(Omnibus):                  0.000   Jarque-Bera (JB):               24.111
+Skew:                          -0.131   Prob(JB):                     5.81e-06
+Kurtosis:                       3.731   Cond. No.                     2.28e+05
+==============================================================================
+
+Notes:
+[1] R² is computed without centering (uncentered) since the model does not contain a constant.
+[2] Standard Errors assume that the covariance matrix of the errors is correctly specified.
+[3] The condition number is large, 2.28e+05. This might indicate that there are
+strong multicollinearity or other numerical problems.
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>statistical_results_as_frame <span style="color:#f92672">=</span> get_dataframe_from_summary(est)
+</span></span><span style="display:flex;"><span>statistical_results_as_frame[statistical_results_as_frame[<span style="color:#e6db74">&#34;P&gt;|t|&#34;</span>] <span style="color:#f92672">&lt;=</span> <span style="color:#ae81ff">0.000</span>]<span style="color:#f92672">.</span>style<span style="color:#f92672">.</span>background_gradient(cmap<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;summer&#39;</span>)
+</span></span></code></pre></div><!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
+<!-- raw HTML omitted -->
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>X_train, X_test, y_train, y_test <span style="color:#f92672">=</span> train_test_split(fixed_Xs, Ys, test_size<span style="color:#f92672">=</span><span style="color:#ae81ff">0.3</span>, random_state<span style="color:#f92672">=</span><span style="color:#ae81ff">10101</span>)
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>learning_curve(simple_model, fixed_Xs, Ys, cv<span style="color:#f92672">=</span><span style="color:#ae81ff">20</span>, scoring<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;r2&#39;</span>)
+</span></span></code></pre></div><p><img src="output_53_0.png" alt="png"></p>
+<pre><code>---------------------------------------------------------------------------
+
+ValueError                                Traceback (most recent call last)
+
+File /opt/anaconda3/lib/python3.9/site-packages/IPython/core/formatters.py:972, in MimeBundleFormatter.__call__(self, obj, include, exclude)
+    969     method = get_real_method(obj, self.print_method)
+    971     if method is not None:
+--&gt; 972         return method(include=include, exclude=exclude)
+    973     return None
+    974 else:
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/base.py:631, in BaseEstimator._repr_mimebundle_(self, **kwargs)
+    629 def _repr_mimebundle_(self, **kwargs):
+    630     &quot;&quot;&quot;Mime bundle used by jupyter kernels to display estimator&quot;&quot;&quot;
+--&gt; 631     output = {&quot;text/plain&quot;: repr(self)}
+    632     if get_config()[&quot;display&quot;] == &quot;diagram&quot;:
+    633         output[&quot;text/html&quot;] = estimator_html_repr(self)
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/base.py:257, in BaseEstimator.__repr__(self, N_CHAR_MAX)
+    249 # use ellipsis for sequences with a lot of elements
+    250 pp = _EstimatorPrettyPrinter(
+    251     compact=True,
+    252     indent=1,
+    253     indent_at_name=True,
+    254     n_max_elements_to_show=N_MAX_ELEMENTS_TO_SHOW,
+    255 )
+--&gt; 257 repr_ = pp.pformat(self)
+    259 # Use bruteforce ellipsis when there are a lot of non-blank characters
+    260 n_nonblank = len(&quot;&quot;.join(repr_.split()))
+
+
+File /opt/anaconda3/lib/python3.9/pprint.py:153, in PrettyPrinter.pformat(self, object)
+    151 def pformat(self, object):
+    152     sio = _StringIO()
+--&gt; 153     self._format(object, sio, 0, 0, {}, 0)
+    154     return sio.getvalue()
+
+
+File /opt/anaconda3/lib/python3.9/pprint.py:170, in PrettyPrinter._format(self, object, stream, indent, allowance, context, level)
+    168     self._readable = False
+    169     return
+--&gt; 170 rep = self._repr(object, context, level)
+    171 max_width = self._width - indent - allowance
+    172 if len(rep) &gt; max_width:
+
+
+File /opt/anaconda3/lib/python3.9/pprint.py:431, in PrettyPrinter._repr(self, object, context, level)
+    430 def _repr(self, object, context, level):
+--&gt; 431     repr, readable, recursive = self.format(object, context.copy(),
+    432                                             self._depth, level)
+    433     if not readable:
+    434         self._readable = False
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:189, in _EstimatorPrettyPrinter.format(self, object, context, maxlevels, level)
+    188 def format(self, object, context, maxlevels, level):
+--&gt; 189     return _safe_repr(
+    190         object, context, maxlevels, level, changed_only=self._changed_only
+    191     )
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:440, in _safe_repr(object, context, maxlevels, level, changed_only)
+    438 recursive = False
+    439 if changed_only:
+--&gt; 440     params = _changed_params(object)
+    441 else:
+    442     params = object.get_params(deep=False)
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:113, in _changed_params(estimator)
+    110         return True
+    111     return False
+--&gt; 113 return {k: v for k, v in params.items() if has_changed(k, v)}
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:113, in &lt;dictcomp&gt;(.0)
+    110         return True
+    111     return False
+--&gt; 113 return {k: v for k, v in params.items() if has_changed(k, v)}
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:101, in _changed_params.&lt;locals&gt;.has_changed(k, v)
+     99 if k not in init_params:  # happens if k is part of a **kwargs
+    100     return True
+--&gt; 101 if init_params[k] == inspect._empty:  # k has no default value
+    102     return True
+    103 # try to avoid calling repr on nested estimators
+
+
+ValueError: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+
+
+
+---------------------------------------------------------------------------
+
+ValueError                                Traceback (most recent call last)
+
+File /opt/anaconda3/lib/python3.9/site-packages/IPython/core/formatters.py:706, in PlainTextFormatter.__call__(self, obj)
+    699 stream = StringIO()
+    700 printer = pretty.RepresentationPrinter(stream, self.verbose,
+    701     self.max_width, self.newline,
+    702     max_seq_length=self.max_seq_length,
+    703     singleton_pprinters=self.singleton_printers,
+    704     type_pprinters=self.type_printers,
+    705     deferred_pprinters=self.deferred_printers)
+--&gt; 706 printer.pretty(obj)
+    707 printer.flush()
+    708 return stream.getvalue()
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/IPython/lib/pretty.py:410, in RepresentationPrinter.pretty(self, obj)
+    407                         return meth(obj, self, cycle)
+    408                 if cls is not object \
+    409                         and callable(cls.__dict__.get('__repr__')):
+--&gt; 410                     return _repr_pprint(obj, self, cycle)
+    412     return _default_pprint(obj, self, cycle)
+    413 finally:
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/IPython/lib/pretty.py:778, in _repr_pprint(obj, p, cycle)
+    776 &quot;&quot;&quot;A pprint that just redirects to the normal repr function.&quot;&quot;&quot;
+    777 # Find newlines and replace them with p.break_()
+--&gt; 778 output = repr(obj)
+    779 lines = output.splitlines()
+    780 with p.group():
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/base.py:257, in BaseEstimator.__repr__(self, N_CHAR_MAX)
+    249 # use ellipsis for sequences with a lot of elements
+    250 pp = _EstimatorPrettyPrinter(
+    251     compact=True,
+    252     indent=1,
+    253     indent_at_name=True,
+    254     n_max_elements_to_show=N_MAX_ELEMENTS_TO_SHOW,
+    255 )
+--&gt; 257 repr_ = pp.pformat(self)
+    259 # Use bruteforce ellipsis when there are a lot of non-blank characters
+    260 n_nonblank = len(&quot;&quot;.join(repr_.split()))
+
+
+File /opt/anaconda3/lib/python3.9/pprint.py:153, in PrettyPrinter.pformat(self, object)
+    151 def pformat(self, object):
+    152     sio = _StringIO()
+--&gt; 153     self._format(object, sio, 0, 0, {}, 0)
+    154     return sio.getvalue()
+
+
+File /opt/anaconda3/lib/python3.9/pprint.py:170, in PrettyPrinter._format(self, object, stream, indent, allowance, context, level)
+    168     self._readable = False
+    169     return
+--&gt; 170 rep = self._repr(object, context, level)
+    171 max_width = self._width - indent - allowance
+    172 if len(rep) &gt; max_width:
+
+
+File /opt/anaconda3/lib/python3.9/pprint.py:431, in PrettyPrinter._repr(self, object, context, level)
+    430 def _repr(self, object, context, level):
+--&gt; 431     repr, readable, recursive = self.format(object, context.copy(),
+    432                                             self._depth, level)
+    433     if not readable:
+    434         self._readable = False
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:189, in _EstimatorPrettyPrinter.format(self, object, context, maxlevels, level)
+    188 def format(self, object, context, maxlevels, level):
+--&gt; 189     return _safe_repr(
+    190         object, context, maxlevels, level, changed_only=self._changed_only
+    191     )
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:440, in _safe_repr(object, context, maxlevels, level, changed_only)
+    438 recursive = False
+    439 if changed_only:
+--&gt; 440     params = _changed_params(object)
+    441 else:
+    442     params = object.get_params(deep=False)
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:113, in _changed_params(estimator)
+    110         return True
+    111     return False
+--&gt; 113 return {k: v for k, v in params.items() if has_changed(k, v)}
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:113, in &lt;dictcomp&gt;(.0)
+    110         return True
+    111     return False
+--&gt; 113 return {k: v for k, v in params.items() if has_changed(k, v)}
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:101, in _changed_params.&lt;locals&gt;.has_changed(k, v)
+     99 if k not in init_params:  # happens if k is part of a **kwargs
+    100     return True
+--&gt; 101 if init_params[k] == inspect._empty:  # k has no default value
+    102     return True
+    103 # try to avoid calling repr on nested estimators
+
+
+ValueError: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+
+
+
+---------------------------------------------------------------------------
+
+ValueError                                Traceback (most recent call last)
+
+File /opt/anaconda3/lib/python3.9/site-packages/IPython/core/formatters.py:342, in BaseFormatter.__call__(self, obj)
+    340     method = get_real_method(obj, self.print_method)
+    341     if method is not None:
+--&gt; 342         return method()
+    343     return None
+    344 else:
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/base.py:627, in BaseEstimator._repr_html_inner(self)
+    622 def _repr_html_inner(self):
+    623     &quot;&quot;&quot;This function is returned by the @property `_repr_html_` to make
+    624     `hasattr(estimator, &quot;_repr_html_&quot;) return `True` or `False` depending
+    625     on `get_config()[&quot;display&quot;]`.
+    626     &quot;&quot;&quot;
+--&gt; 627     return estimator_html_repr(self)
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_estimator_html_repr.py:393, in estimator_html_repr(estimator)
+    391 style_template = Template(_STYLE)
+    392 style_with_id = style_template.substitute(id=container_id)
+--&gt; 393 estimator_str = str(estimator)
+    395 # The fallback message is shown by default and loading the CSS sets
+    396 # div.sk-text-repr-fallback to display: none to hide the fallback message.
+    397 #
+   (...)
+    402 # The reverse logic applies to HTML repr div.sk-container.
+    403 # div.sk-container is hidden by default and the loading the CSS displays it.
+    404 fallback_msg = (
+    405     &quot;In a Jupyter environment, please rerun this cell to show the HTML&quot;
+    406     &quot; representation or trust the notebook. &lt;br /&gt;On GitHub, the&quot;
+    407     &quot; HTML representation is unable to render, please try loading this page&quot;
+    408     &quot; with nbviewer.org.&quot;
+    409 )
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/base.py:257, in BaseEstimator.__repr__(self, N_CHAR_MAX)
+    249 # use ellipsis for sequences with a lot of elements
+    250 pp = _EstimatorPrettyPrinter(
+    251     compact=True,
+    252     indent=1,
+    253     indent_at_name=True,
+    254     n_max_elements_to_show=N_MAX_ELEMENTS_TO_SHOW,
+    255 )
+--&gt; 257 repr_ = pp.pformat(self)
+    259 # Use bruteforce ellipsis when there are a lot of non-blank characters
+    260 n_nonblank = len(&quot;&quot;.join(repr_.split()))
+
+
+File /opt/anaconda3/lib/python3.9/pprint.py:153, in PrettyPrinter.pformat(self, object)
+    151 def pformat(self, object):
+    152     sio = _StringIO()
+--&gt; 153     self._format(object, sio, 0, 0, {}, 0)
+    154     return sio.getvalue()
+
+
+File /opt/anaconda3/lib/python3.9/pprint.py:170, in PrettyPrinter._format(self, object, stream, indent, allowance, context, level)
+    168     self._readable = False
+    169     return
+--&gt; 170 rep = self._repr(object, context, level)
+    171 max_width = self._width - indent - allowance
+    172 if len(rep) &gt; max_width:
+
+
+File /opt/anaconda3/lib/python3.9/pprint.py:431, in PrettyPrinter._repr(self, object, context, level)
+    430 def _repr(self, object, context, level):
+--&gt; 431     repr, readable, recursive = self.format(object, context.copy(),
+    432                                             self._depth, level)
+    433     if not readable:
+    434         self._readable = False
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:189, in _EstimatorPrettyPrinter.format(self, object, context, maxlevels, level)
+    188 def format(self, object, context, maxlevels, level):
+--&gt; 189     return _safe_repr(
+    190         object, context, maxlevels, level, changed_only=self._changed_only
+    191     )
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:440, in _safe_repr(object, context, maxlevels, level, changed_only)
+    438 recursive = False
+    439 if changed_only:
+--&gt; 440     params = _changed_params(object)
+    441 else:
+    442     params = object.get_params(deep=False)
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:113, in _changed_params(estimator)
+    110         return True
+    111     return False
+--&gt; 113 return {k: v for k, v in params.items() if has_changed(k, v)}
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:113, in &lt;dictcomp&gt;(.0)
+    110         return True
+    111     return False
+--&gt; 113 return {k: v for k, v in params.items() if has_changed(k, v)}
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:101, in _changed_params.&lt;locals&gt;.has_changed(k, v)
+     99 if k not in init_params:  # happens if k is part of a **kwargs
+    100     return True
+--&gt; 101 if init_params[k] == inspect._empty:  # k has no default value
+    102     return True
+    103 # try to avoid calling repr on nested estimators
+
+
+ValueError: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>visualizer <span style="color:#f92672">=</span> ResidualsPlot(simple_model)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>visualizer<span style="color:#f92672">.</span>fit(X_train, y_train)
+</span></span><span style="display:flex;"><span>visualizer<span style="color:#f92672">.</span>score(X_test, y_test)
+</span></span><span style="display:flex;"><span>visualizer<span style="color:#f92672">.</span>show(simple_model)
+</span></span></code></pre></div><pre><code>---------------------------------------------------------------------------
+
+AttributeError                            Traceback (most recent call last)
+
+Cell In[46], line 5
+      3 visualizer.fit(X_train, y_train)
+      4 visualizer.score(X_test, y_test)
+----&gt; 5 visualizer.show(simple_model)
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/yellowbrick/base.py:244, in Visualizer.show(self, outpath, clear_figure, **kwargs)
+    241 self.finalize()
+    243 if outpath is not None:
+--&gt; 244     plt.savefig(outpath, **kwargs)
+    245 else:
+    246     plt.show()
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/matplotlib/pyplot.py:1023, in savefig(*args, **kwargs)
+   1020 @_copy_docstring_and_deprecators(Figure.savefig)
+   1021 def savefig(*args, **kwargs):
+   1022     fig = gcf()
+-&gt; 1023     res = fig.savefig(*args, **kwargs)
+   1024     fig.canvas.draw_idle()  # Need this if 'transparent=True', to reset colors.
+   1025     return res
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/matplotlib/figure.py:3343, in Figure.savefig(self, fname, transparent, **kwargs)
+   3339     for ax in self.axes:
+   3340         stack.enter_context(
+   3341             ax.patch._cm_set(facecolor='none', edgecolor='none'))
+-&gt; 3343 self.canvas.print_figure(fname, **kwargs)
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/matplotlib/backend_bases.py:2366, in FigureCanvasBase.print_figure(self, filename, dpi, facecolor, edgecolor, orientation, format, bbox_inches, pad_inches, bbox_extra_artists, backend, **kwargs)
+   2362 try:
+   2363     # _get_renderer may change the figure dpi (as vector formats
+   2364     # force the figure dpi to 72), so we need to set it again here.
+   2365     with cbook._setattr_cm(self.figure, dpi=dpi):
+-&gt; 2366         result = print_method(
+   2367             filename,
+   2368             facecolor=facecolor,
+   2369             edgecolor=edgecolor,
+   2370             orientation=orientation,
+   2371             bbox_inches_restore=_bbox_inches_restore,
+   2372             **kwargs)
+   2373 finally:
+   2374     if bbox_inches and restore_bbox:
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/matplotlib/backend_bases.py:2232, in FigureCanvasBase._switch_canvas_and_return_print_method.&lt;locals&gt;.&lt;lambda&gt;(*args, **kwargs)
+   2228     optional_kws = {  # Passed by print_figure for other renderers.
+   2229         &quot;dpi&quot;, &quot;facecolor&quot;, &quot;edgecolor&quot;, &quot;orientation&quot;,
+   2230         &quot;bbox_inches_restore&quot;}
+   2231     skip = optional_kws - {*inspect.signature(meth).parameters}
+-&gt; 2232     print_method = functools.wraps(meth)(lambda *args, **kwargs: meth(
+   2233         *args, **{k: v for k, v in kwargs.items() if k not in skip}))
+   2234 else:  # Let third-parties do as they see fit.
+   2235     print_method = meth
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/matplotlib/backends/backend_agg.py:509, in FigureCanvasAgg.print_png(self, filename_or_obj, metadata, pil_kwargs)
+    462 def print_png(self, filename_or_obj, *, metadata=None, pil_kwargs=None):
+    463     &quot;&quot;&quot;
+    464     Write the figure to a PNG file.
+    465 
+   (...)
+    507         *metadata*, including the default 'Software' key.
+    508     &quot;&quot;&quot;
+--&gt; 509     self._print_pil(filename_or_obj, &quot;png&quot;, pil_kwargs, metadata)
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/matplotlib/backends/backend_agg.py:458, in FigureCanvasAgg._print_pil(self, filename_or_obj, fmt, pil_kwargs, metadata)
+    453 &quot;&quot;&quot;
+    454 Draw the canvas, then save it using `.image.imsave` (to which
+    455 *pil_kwargs* and *metadata* are forwarded).
+    456 &quot;&quot;&quot;
+    457 FigureCanvasAgg.draw(self)
+--&gt; 458 mpl.image.imsave(
+    459     filename_or_obj, self.buffer_rgba(), format=fmt, origin=&quot;upper&quot;,
+    460     dpi=self.figure.dpi, metadata=metadata, pil_kwargs=pil_kwargs)
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/matplotlib/image.py:1689, in imsave(fname, arr, vmin, vmax, cmap, format, origin, dpi, metadata, pil_kwargs)
+   1687 pil_kwargs.setdefault(&quot;format&quot;, format)
+   1688 pil_kwargs.setdefault(&quot;dpi&quot;, (dpi, dpi))
+-&gt; 1689 image.save(fname, **pil_kwargs)
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/PIL/Image.py:2320, in Image.save(self, fp, format, **params)
+   2317         fp = builtins.open(filename, &quot;w+b&quot;)
+   2319 try:
+-&gt; 2320     save_handler(self, fp, filename)
+   2321 except Exception:
+   2322     if open_fp:
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/PIL/PngImagePlugin.py:1262, in _save(im, fp, filename, chunk, save_all)
+   1257     raise OSError(f&quot;cannot write mode {mode} as PNG&quot;) from e
+   1259 #
+   1260 # write minimal PNG file
+-&gt; 1262 fp.write(_MAGIC)
+   1264 chunk(
+   1265     fp,
+   1266     b&quot;IHDR&quot;,
+   (...)
+   1272     b&quot;\0&quot;,  # 12: interlace flag
+   1273 )
+   1275 chunks = [b&quot;cHRM&quot;, b&quot;gAMA&quot;, b&quot;sBIT&quot;, b&quot;sRGB&quot;, b&quot;tIME&quot;]
+
+
+AttributeError: 'LinearRegression' object has no attribute 'write'
+</code></pre>
+<p><img src="output_54_1.png" alt="png"></p>
+<h3 id="observation-2">Observation:</h3>
+<ul>
+<li>As suspected Standard of living, yearly income and Coefficient bonus malus has strong correlation with other other independent variables, they can be predicted by other independent variables.</li>
+<li>As suspected model is stable against few features, after dropping independent variables with high VIF scores scores 0.886</li>
+<li>P-values: Socioeconomic: student, unemployed, vehicle types 3,5 suv and utility, yearly income, age and monthly kilometers suggest strong significant relation between them and target variable on large populations.</li>
+<li>Brand Renault and Toyota P-values suggest strong influence on target variable compared to other brands.</li>
+<li>Residuals: indicates a good fit for linear model, predicted values greater than 40 are misfit for compared to the training samples.</li>
+<li>unexpected high p-value for Socioeconomic Self employed brand Volkswagen, Credit score and Yearly maintenance cost independent variables.</li>
+<li>Model tend to generalize when applying cross-validation of 20 folds, testing and training scores are matching after 20 folds/iterations.</li>
+</ul>
+<h2 id="more-complex-model">More Complex Model:</h2>
+<ul>
+<li>From the above observation we have constructed a stable model with simple features and linear regressor, I would vote for simplified models since they are easy to explain to stakeholders and easier to productionize compared to more complex model with high variance.</li>
+<li>The fact that the data is synthetic and generated from known function makes it even easier to fit a model against normally distributed target variables.</li>
+<li>Tho it&rsquo;s not required for this particular dataset but the demonstration below will help explain what is happening behind the scene why applying a particular predictions.</li>
+</ul>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> lightgbm <span style="color:#f92672">import</span> LGBMRegressor
+</span></span><span style="display:flex;"><span><span style="color:#f92672">import</span> numpy <span style="color:#66d9ef">as</span> np
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>complex_model <span style="color:#f92672">=</span> LGBMRegressor(random_state<span style="color:#f92672">=</span>np<span style="color:#f92672">.</span>random<span style="color:#f92672">.</span>RandomState()<span style="color:#f92672">.</span>get_state()[<span style="color:#ae81ff">1</span>][<span style="color:#ae81ff">0</span>])
+</span></span><span style="display:flex;"><span>complex_model<span style="color:#f92672">.</span>fit(X_train, y_train)
+</span></span></code></pre></div><!-- raw HTML omitted -->
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>{<span style="color:#e6db74">&#34;training score&#34;</span>: complex_model<span style="color:#f92672">.</span>score(X_train, y_train),
+</span></span><span style="display:flex;"><span> <span style="color:#e6db74">&#34;testing score&#34;</span>: complex_model<span style="color:#f92672">.</span>score(X_test, y_test)}
+</span></span></code></pre></div><pre><code>{'training score': 0.9954600929824392, 'testing score': 0.9744489721140687}
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> yellowbrick.model_selection <span style="color:#f92672">import</span> learning_curve
+</span></span><span style="display:flex;"><span>learning_curve(complex_model, fixed_Xs, Ys, cv<span style="color:#f92672">=</span><span style="color:#ae81ff">20</span>, scoring<span style="color:#f92672">=</span><span style="color:#e6db74">&#39;r2&#39;</span>, n_jobs<span style="color:#f92672">=</span><span style="color:#66d9ef">None</span>)
+</span></span></code></pre></div><p><img src="output_59_0.png" alt="png"></p>
+<pre><code>---------------------------------------------------------------------------
+
+ValueError                                Traceback (most recent call last)
+
+File /opt/anaconda3/lib/python3.9/site-packages/IPython/core/formatters.py:972, in MimeBundleFormatter.__call__(self, obj, include, exclude)
+    969     method = get_real_method(obj, self.print_method)
+    971     if method is not None:
+--&gt; 972         return method(include=include, exclude=exclude)
+    973     return None
+    974 else:
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/base.py:631, in BaseEstimator._repr_mimebundle_(self, **kwargs)
+    629 def _repr_mimebundle_(self, **kwargs):
+    630     &quot;&quot;&quot;Mime bundle used by jupyter kernels to display estimator&quot;&quot;&quot;
+--&gt; 631     output = {&quot;text/plain&quot;: repr(self)}
+    632     if get_config()[&quot;display&quot;] == &quot;diagram&quot;:
+    633         output[&quot;text/html&quot;] = estimator_html_repr(self)
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/base.py:257, in BaseEstimator.__repr__(self, N_CHAR_MAX)
+    249 # use ellipsis for sequences with a lot of elements
+    250 pp = _EstimatorPrettyPrinter(
+    251     compact=True,
+    252     indent=1,
+    253     indent_at_name=True,
+    254     n_max_elements_to_show=N_MAX_ELEMENTS_TO_SHOW,
+    255 )
+--&gt; 257 repr_ = pp.pformat(self)
+    259 # Use bruteforce ellipsis when there are a lot of non-blank characters
+    260 n_nonblank = len(&quot;&quot;.join(repr_.split()))
+
+
+File /opt/anaconda3/lib/python3.9/pprint.py:153, in PrettyPrinter.pformat(self, object)
+    151 def pformat(self, object):
+    152     sio = _StringIO()
+--&gt; 153     self._format(object, sio, 0, 0, {}, 0)
+    154     return sio.getvalue()
+
+
+File /opt/anaconda3/lib/python3.9/pprint.py:170, in PrettyPrinter._format(self, object, stream, indent, allowance, context, level)
+    168     self._readable = False
+    169     return
+--&gt; 170 rep = self._repr(object, context, level)
+    171 max_width = self._width - indent - allowance
+    172 if len(rep) &gt; max_width:
+
+
+File /opt/anaconda3/lib/python3.9/pprint.py:431, in PrettyPrinter._repr(self, object, context, level)
+    430 def _repr(self, object, context, level):
+--&gt; 431     repr, readable, recursive = self.format(object, context.copy(),
+    432                                             self._depth, level)
+    433     if not readable:
+    434         self._readable = False
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:189, in _EstimatorPrettyPrinter.format(self, object, context, maxlevels, level)
+    188 def format(self, object, context, maxlevels, level):
+--&gt; 189     return _safe_repr(
+    190         object, context, maxlevels, level, changed_only=self._changed_only
+    191     )
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:440, in _safe_repr(object, context, maxlevels, level, changed_only)
+    438 recursive = False
+    439 if changed_only:
+--&gt; 440     params = _changed_params(object)
+    441 else:
+    442     params = object.get_params(deep=False)
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:113, in _changed_params(estimator)
+    110         return True
+    111     return False
+--&gt; 113 return {k: v for k, v in params.items() if has_changed(k, v)}
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:113, in &lt;dictcomp&gt;(.0)
+    110         return True
+    111     return False
+--&gt; 113 return {k: v for k, v in params.items() if has_changed(k, v)}
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:101, in _changed_params.&lt;locals&gt;.has_changed(k, v)
+     99 if k not in init_params:  # happens if k is part of a **kwargs
+    100     return True
+--&gt; 101 if init_params[k] == inspect._empty:  # k has no default value
+    102     return True
+    103 # try to avoid calling repr on nested estimators
+
+
+ValueError: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+
+
+
+---------------------------------------------------------------------------
+
+ValueError                                Traceback (most recent call last)
+
+File /opt/anaconda3/lib/python3.9/site-packages/IPython/core/formatters.py:706, in PlainTextFormatter.__call__(self, obj)
+    699 stream = StringIO()
+    700 printer = pretty.RepresentationPrinter(stream, self.verbose,
+    701     self.max_width, self.newline,
+    702     max_seq_length=self.max_seq_length,
+    703     singleton_pprinters=self.singleton_printers,
+    704     type_pprinters=self.type_printers,
+    705     deferred_pprinters=self.deferred_printers)
+--&gt; 706 printer.pretty(obj)
+    707 printer.flush()
+    708 return stream.getvalue()
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/IPython/lib/pretty.py:410, in RepresentationPrinter.pretty(self, obj)
+    407                         return meth(obj, self, cycle)
+    408                 if cls is not object \
+    409                         and callable(cls.__dict__.get('__repr__')):
+--&gt; 410                     return _repr_pprint(obj, self, cycle)
+    412     return _default_pprint(obj, self, cycle)
+    413 finally:
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/IPython/lib/pretty.py:778, in _repr_pprint(obj, p, cycle)
+    776 &quot;&quot;&quot;A pprint that just redirects to the normal repr function.&quot;&quot;&quot;
+    777 # Find newlines and replace them with p.break_()
+--&gt; 778 output = repr(obj)
+    779 lines = output.splitlines()
+    780 with p.group():
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/base.py:257, in BaseEstimator.__repr__(self, N_CHAR_MAX)
+    249 # use ellipsis for sequences with a lot of elements
+    250 pp = _EstimatorPrettyPrinter(
+    251     compact=True,
+    252     indent=1,
+    253     indent_at_name=True,
+    254     n_max_elements_to_show=N_MAX_ELEMENTS_TO_SHOW,
+    255 )
+--&gt; 257 repr_ = pp.pformat(self)
+    259 # Use bruteforce ellipsis when there are a lot of non-blank characters
+    260 n_nonblank = len(&quot;&quot;.join(repr_.split()))
+
+
+File /opt/anaconda3/lib/python3.9/pprint.py:153, in PrettyPrinter.pformat(self, object)
+    151 def pformat(self, object):
+    152     sio = _StringIO()
+--&gt; 153     self._format(object, sio, 0, 0, {}, 0)
+    154     return sio.getvalue()
+
+
+File /opt/anaconda3/lib/python3.9/pprint.py:170, in PrettyPrinter._format(self, object, stream, indent, allowance, context, level)
+    168     self._readable = False
+    169     return
+--&gt; 170 rep = self._repr(object, context, level)
+    171 max_width = self._width - indent - allowance
+    172 if len(rep) &gt; max_width:
+
+
+File /opt/anaconda3/lib/python3.9/pprint.py:431, in PrettyPrinter._repr(self, object, context, level)
+    430 def _repr(self, object, context, level):
+--&gt; 431     repr, readable, recursive = self.format(object, context.copy(),
+    432                                             self._depth, level)
+    433     if not readable:
+    434         self._readable = False
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:189, in _EstimatorPrettyPrinter.format(self, object, context, maxlevels, level)
+    188 def format(self, object, context, maxlevels, level):
+--&gt; 189     return _safe_repr(
+    190         object, context, maxlevels, level, changed_only=self._changed_only
+    191     )
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:440, in _safe_repr(object, context, maxlevels, level, changed_only)
+    438 recursive = False
+    439 if changed_only:
+--&gt; 440     params = _changed_params(object)
+    441 else:
+    442     params = object.get_params(deep=False)
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:113, in _changed_params(estimator)
+    110         return True
+    111     return False
+--&gt; 113 return {k: v for k, v in params.items() if has_changed(k, v)}
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:113, in &lt;dictcomp&gt;(.0)
+    110         return True
+    111     return False
+--&gt; 113 return {k: v for k, v in params.items() if has_changed(k, v)}
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:101, in _changed_params.&lt;locals&gt;.has_changed(k, v)
+     99 if k not in init_params:  # happens if k is part of a **kwargs
+    100     return True
+--&gt; 101 if init_params[k] == inspect._empty:  # k has no default value
+    102     return True
+    103 # try to avoid calling repr on nested estimators
+
+
+ValueError: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+
+
+
+---------------------------------------------------------------------------
+
+ValueError                                Traceback (most recent call last)
+
+File /opt/anaconda3/lib/python3.9/site-packages/IPython/core/formatters.py:342, in BaseFormatter.__call__(self, obj)
+    340     method = get_real_method(obj, self.print_method)
+    341     if method is not None:
+--&gt; 342         return method()
+    343     return None
+    344 else:
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/base.py:627, in BaseEstimator._repr_html_inner(self)
+    622 def _repr_html_inner(self):
+    623     &quot;&quot;&quot;This function is returned by the @property `_repr_html_` to make
+    624     `hasattr(estimator, &quot;_repr_html_&quot;) return `True` or `False` depending
+    625     on `get_config()[&quot;display&quot;]`.
+    626     &quot;&quot;&quot;
+--&gt; 627     return estimator_html_repr(self)
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_estimator_html_repr.py:393, in estimator_html_repr(estimator)
+    391 style_template = Template(_STYLE)
+    392 style_with_id = style_template.substitute(id=container_id)
+--&gt; 393 estimator_str = str(estimator)
+    395 # The fallback message is shown by default and loading the CSS sets
+    396 # div.sk-text-repr-fallback to display: none to hide the fallback message.
+    397 #
+   (...)
+    402 # The reverse logic applies to HTML repr div.sk-container.
+    403 # div.sk-container is hidden by default and the loading the CSS displays it.
+    404 fallback_msg = (
+    405     &quot;In a Jupyter environment, please rerun this cell to show the HTML&quot;
+    406     &quot; representation or trust the notebook. &lt;br /&gt;On GitHub, the&quot;
+    407     &quot; HTML representation is unable to render, please try loading this page&quot;
+    408     &quot; with nbviewer.org.&quot;
+    409 )
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/base.py:257, in BaseEstimator.__repr__(self, N_CHAR_MAX)
+    249 # use ellipsis for sequences with a lot of elements
+    250 pp = _EstimatorPrettyPrinter(
+    251     compact=True,
+    252     indent=1,
+    253     indent_at_name=True,
+    254     n_max_elements_to_show=N_MAX_ELEMENTS_TO_SHOW,
+    255 )
+--&gt; 257 repr_ = pp.pformat(self)
+    259 # Use bruteforce ellipsis when there are a lot of non-blank characters
+    260 n_nonblank = len(&quot;&quot;.join(repr_.split()))
+
+
+File /opt/anaconda3/lib/python3.9/pprint.py:153, in PrettyPrinter.pformat(self, object)
+    151 def pformat(self, object):
+    152     sio = _StringIO()
+--&gt; 153     self._format(object, sio, 0, 0, {}, 0)
+    154     return sio.getvalue()
+
+
+File /opt/anaconda3/lib/python3.9/pprint.py:170, in PrettyPrinter._format(self, object, stream, indent, allowance, context, level)
+    168     self._readable = False
+    169     return
+--&gt; 170 rep = self._repr(object, context, level)
+    171 max_width = self._width - indent - allowance
+    172 if len(rep) &gt; max_width:
+
+
+File /opt/anaconda3/lib/python3.9/pprint.py:431, in PrettyPrinter._repr(self, object, context, level)
+    430 def _repr(self, object, context, level):
+--&gt; 431     repr, readable, recursive = self.format(object, context.copy(),
+    432                                             self._depth, level)
+    433     if not readable:
+    434         self._readable = False
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:189, in _EstimatorPrettyPrinter.format(self, object, context, maxlevels, level)
+    188 def format(self, object, context, maxlevels, level):
+--&gt; 189     return _safe_repr(
+    190         object, context, maxlevels, level, changed_only=self._changed_only
+    191     )
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:440, in _safe_repr(object, context, maxlevels, level, changed_only)
+    438 recursive = False
+    439 if changed_only:
+--&gt; 440     params = _changed_params(object)
+    441 else:
+    442     params = object.get_params(deep=False)
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:113, in _changed_params(estimator)
+    110         return True
+    111     return False
+--&gt; 113 return {k: v for k, v in params.items() if has_changed(k, v)}
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:113, in &lt;dictcomp&gt;(.0)
+    110         return True
+    111     return False
+--&gt; 113 return {k: v for k, v in params.items() if has_changed(k, v)}
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/sklearn/utils/_pprint.py:101, in _changed_params.&lt;locals&gt;.has_changed(k, v)
+     99 if k not in init_params:  # happens if k is part of a **kwargs
+    100     return True
+--&gt; 101 if init_params[k] == inspect._empty:  # k has no default value
+    102     return True
+    103 # try to avoid calling repr on nested estimators
+
+
+ValueError: The truth value of an array with more than one element is ambiguous. Use a.any() or a.all()
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>visualizer <span style="color:#f92672">=</span> ResidualsPlot(complex_model)
+</span></span><span style="display:flex;"><span>visualizer<span style="color:#f92672">.</span>fit(X_train, y_train)
+</span></span><span style="display:flex;"><span>visualizer<span style="color:#f92672">.</span>score(X_test, y_test)
+</span></span><span style="display:flex;"><span>visualizer<span style="color:#f92672">.</span>show(complex_model)
+</span></span></code></pre></div><pre><code>---------------------------------------------------------------------------
+
+AttributeError                            Traceback (most recent call last)
+
+Cell In[50], line 4
+      2 visualizer.fit(X_train, y_train)
+      3 visualizer.score(X_test, y_test)
+----&gt; 4 visualizer.show(complex_model)
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/yellowbrick/base.py:244, in Visualizer.show(self, outpath, clear_figure, **kwargs)
+    241 self.finalize()
+    243 if outpath is not None:
+--&gt; 244     plt.savefig(outpath, **kwargs)
+    245 else:
+    246     plt.show()
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/matplotlib/pyplot.py:1023, in savefig(*args, **kwargs)
+   1020 @_copy_docstring_and_deprecators(Figure.savefig)
+   1021 def savefig(*args, **kwargs):
+   1022     fig = gcf()
+-&gt; 1023     res = fig.savefig(*args, **kwargs)
+   1024     fig.canvas.draw_idle()  # Need this if 'transparent=True', to reset colors.
+   1025     return res
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/matplotlib/figure.py:3343, in Figure.savefig(self, fname, transparent, **kwargs)
+   3339     for ax in self.axes:
+   3340         stack.enter_context(
+   3341             ax.patch._cm_set(facecolor='none', edgecolor='none'))
+-&gt; 3343 self.canvas.print_figure(fname, **kwargs)
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/matplotlib/backend_bases.py:2366, in FigureCanvasBase.print_figure(self, filename, dpi, facecolor, edgecolor, orientation, format, bbox_inches, pad_inches, bbox_extra_artists, backend, **kwargs)
+   2362 try:
+   2363     # _get_renderer may change the figure dpi (as vector formats
+   2364     # force the figure dpi to 72), so we need to set it again here.
+   2365     with cbook._setattr_cm(self.figure, dpi=dpi):
+-&gt; 2366         result = print_method(
+   2367             filename,
+   2368             facecolor=facecolor,
+   2369             edgecolor=edgecolor,
+   2370             orientation=orientation,
+   2371             bbox_inches_restore=_bbox_inches_restore,
+   2372             **kwargs)
+   2373 finally:
+   2374     if bbox_inches and restore_bbox:
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/matplotlib/backend_bases.py:2232, in FigureCanvasBase._switch_canvas_and_return_print_method.&lt;locals&gt;.&lt;lambda&gt;(*args, **kwargs)
+   2228     optional_kws = {  # Passed by print_figure for other renderers.
+   2229         &quot;dpi&quot;, &quot;facecolor&quot;, &quot;edgecolor&quot;, &quot;orientation&quot;,
+   2230         &quot;bbox_inches_restore&quot;}
+   2231     skip = optional_kws - {*inspect.signature(meth).parameters}
+-&gt; 2232     print_method = functools.wraps(meth)(lambda *args, **kwargs: meth(
+   2233         *args, **{k: v for k, v in kwargs.items() if k not in skip}))
+   2234 else:  # Let third-parties do as they see fit.
+   2235     print_method = meth
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/matplotlib/backends/backend_agg.py:509, in FigureCanvasAgg.print_png(self, filename_or_obj, metadata, pil_kwargs)
+    462 def print_png(self, filename_or_obj, *, metadata=None, pil_kwargs=None):
+    463     &quot;&quot;&quot;
+    464     Write the figure to a PNG file.
+    465 
+   (...)
+    507         *metadata*, including the default 'Software' key.
+    508     &quot;&quot;&quot;
+--&gt; 509     self._print_pil(filename_or_obj, &quot;png&quot;, pil_kwargs, metadata)
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/matplotlib/backends/backend_agg.py:458, in FigureCanvasAgg._print_pil(self, filename_or_obj, fmt, pil_kwargs, metadata)
+    453 &quot;&quot;&quot;
+    454 Draw the canvas, then save it using `.image.imsave` (to which
+    455 *pil_kwargs* and *metadata* are forwarded).
+    456 &quot;&quot;&quot;
+    457 FigureCanvasAgg.draw(self)
+--&gt; 458 mpl.image.imsave(
+    459     filename_or_obj, self.buffer_rgba(), format=fmt, origin=&quot;upper&quot;,
+    460     dpi=self.figure.dpi, metadata=metadata, pil_kwargs=pil_kwargs)
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/matplotlib/image.py:1689, in imsave(fname, arr, vmin, vmax, cmap, format, origin, dpi, metadata, pil_kwargs)
+   1687 pil_kwargs.setdefault(&quot;format&quot;, format)
+   1688 pil_kwargs.setdefault(&quot;dpi&quot;, (dpi, dpi))
+-&gt; 1689 image.save(fname, **pil_kwargs)
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/PIL/Image.py:2320, in Image.save(self, fp, format, **params)
+   2317         fp = builtins.open(filename, &quot;w+b&quot;)
+   2319 try:
+-&gt; 2320     save_handler(self, fp, filename)
+   2321 except Exception:
+   2322     if open_fp:
+
+
+File /opt/anaconda3/lib/python3.9/site-packages/PIL/PngImagePlugin.py:1262, in _save(im, fp, filename, chunk, save_all)
+   1257     raise OSError(f&quot;cannot write mode {mode} as PNG&quot;) from e
+   1259 #
+   1260 # write minimal PNG file
+-&gt; 1262 fp.write(_MAGIC)
+   1264 chunk(
+   1265     fp,
+   1266     b&quot;IHDR&quot;,
+   (...)
+   1272     b&quot;\0&quot;,  # 12: interlace flag
+   1273 )
+   1275 chunks = [b&quot;cHRM&quot;, b&quot;gAMA&quot;, b&quot;sBIT&quot;, b&quot;sRGB&quot;, b&quot;tIME&quot;]
+
+
+AttributeError: 'LGBMRegressor' object has no attribute 'write'
+</code></pre>
+<p><img src="output_60_1.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>feature_importance_plot(complex_model<span style="color:#f92672">.</span>feature_importances_, X_train<span style="color:#f92672">.</span>columns<span style="color:#f92672">.</span>tolist())
+</span></span></code></pre></div><p><img src="output_61_0.png" alt="png"></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span><span style="color:#f92672">from</span> sklearn.model_selection <span style="color:#f92672">import</span> train_test_split
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>X_train, X_test, y_train, y_test <span style="color:#f92672">=</span> train_test_split(fixed_Xs, Ys, test_size<span style="color:#f92672">=</span><span style="color:#ae81ff">0.3</span>, random_state<span style="color:#f92672">=</span><span style="color:#ae81ff">10101</span>)
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>complex_model<span style="color:#f92672">.</span>fit(X_train, y_train)
+</span></span><span style="display:flex;"><span>complex_model<span style="color:#f92672">.</span>score(X_test, y_test)
+</span></span></code></pre></div><pre><code>0.9744489721140687
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>{<span style="color:#e6db74">&#34;training score&#34;</span>: complex_model<span style="color:#f92672">.</span>score(X_train, y_train),
+</span></span><span style="display:flex;"><span> <span style="color:#e6db74">&#34;testing score&#34;</span>: complex_model<span style="color:#f92672">.</span>score(X_test, y_test)}
+</span></span></code></pre></div><pre><code>{'training score': 0.9954600929824392, 'testing score': 0.9744489721140687}
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>complex_model<span style="color:#f92672">.</span>fit(fixed_Xs, Ys)
+</span></span></code></pre></div><!-- raw HTML omitted -->
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>save_model(complex_model, <span style="color:#e6db74">&#34;lgb.pkl&#34;</span>)
+</span></span></code></pre></div><pre><code>model saved....
+</code></pre>
+<h3 id="observations">Observations:</h3>
+<ul>
+<li>Running Hyperparameters search for limited number of parms did improve the results by 0.01 only, it comes from the fact that the dataset is small with limited number of features.</li>
+<li>Baseline boosting model is accurate enough to generalize on unseen data.</li>
+</ul>
+<h3 id="predict-on-unseen-out-of-sample-data">Predict on unseen Out-of-Sample Data:</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>golden_data <span style="color:#f92672">=</span> pd<span style="color:#f92672">.</span>read_csv(<span style="color:#e6db74">&#34;../../Data/scoring_dataset.csv&#34;</span>)
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>golden_data <span style="color:#f92672">=</span> prepare_out_of_sample_data(golden_data)
+</span></span></code></pre></div><div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>predictions <span style="color:#f92672">=</span> complex_model<span style="color:#f92672">.</span>predict(golden_data)
+</span></span><span style="display:flex;"><span>predictions
+</span></span></code></pre></div><pre><code>array([ 58.91912859,  49.89491262,  55.44678162, -24.23093475,
+       -14.2723258 ,  -8.53386753, -13.64680361,  -9.4624002 ,
+        17.76568715,  11.00738228, -19.44384469,  13.65440611,
+        10.68901548,  42.35671464,  64.73750346,  31.21405441,
+        33.57720901,  66.54627244,  17.34307286, -17.41840316,
+        10.57054402,  27.4537283 ,  69.35269097, -12.27879405,
+        15.81947529,  -9.96537782,  -3.50549684,  10.60525138,
+        29.81544625, -11.33242524,   7.88417464,  11.87869155,
+       -21.32857179,  68.10191868,  34.02686042,  12.06295287,
+         9.21788335,  11.4395712 , -22.66475147,  10.90707741,
+       -11.89317256, -21.2898417 , -16.45650735,  58.73523363,
+        11.32063774,  51.41548191,  -6.16929583, -17.21084875,
+         8.84313568,  -0.23152295,  16.33390489,  -7.37397323,
+        47.33042878,  11.59818288,  35.74334818,  31.79114097,
+        31.00438204,  30.59942712,   3.56928081,  32.61225069,
+        30.14717748, -16.59407291,  36.6298427 ,  34.46728649,
+         5.73856431,   3.28154025, -15.33032491,  23.72479771,
+       -13.24799205,   1.69154499,  28.76880574,  45.32716805,
+        10.66541024, -16.7040101 ,  13.71867892,  38.66482697,
+        64.90888121,  18.33568536,  64.48881502, -12.42543113,
+        13.08235257,  32.67607121,   7.26262942,   0.93023009,
+       -17.55597795,  52.73909182,  54.72162463,  56.50324747,
+       -16.27963481,  -3.71731225,   1.58822318,  46.84579724,
+         5.79652318,   4.07176173,  11.33118164,  -9.52012316,
+        72.39011481, -13.65875517,  70.09885245,  15.08417505,
+         5.53303608,  22.4515763 , -10.57416188,  -7.47169768,
+        -3.75537854,  11.61249461,  11.04423492, -14.5301915 ,
+        67.9224915 ,  68.21783413,  64.9184886 ,  45.26689911,
+        14.07367844, -21.0615744 ,  -9.68622993,   7.99011859,
+        70.128609  ,   1.33740385, -12.34573747, -16.53098494,
+         0.64245634, -11.7774245 , -17.50944337,  10.03978082,
+        12.20080724,   0.85478322, -14.41113003,  17.45473449,
+        11.11047532, -13.92590323, -26.3335464 ,  -0.49609702,
+        67.70577189,   8.76217364,  11.37061747,  13.94466969,
+        31.95999566,  -4.73164322,  -4.78788719,  35.05434567,
+       -17.65590835,  11.19294598, -23.46091508, -14.90541622,
+        59.80512017,  -4.39993801,  65.87373554, -10.21459077,
+         3.34296328,   3.46447491,  18.02436197,  70.92517188,
+       -16.13044562,  15.22610701,  67.3571339 ,  31.31605017,
+        16.25664797,  65.32404436,  -2.44943542,  11.07774281,
+        -1.36484196,  46.27491016,  11.75272127,  31.86936077,
+        37.50262643, -12.96696298,  57.84506126,  69.08963572,
+       -11.01156093,  -4.98246628,  -2.70502784, -19.59879822,
+        67.11843829,  12.43076254,  -2.18990868,  -5.76053432,
+        30.75636258,   2.32066105, -27.34262945,  23.86179321,
+         6.83557926,  38.6771704 ,   5.4039176 , -19.74764152,
+        -1.87067716,  36.43479928,  -6.51198102,   1.46725762,
+        54.16904585,  10.90929559,  63.31117438,  11.46281534,
+        30.56631811,  19.12706775,  44.89570016,  -2.61577375,
+         2.26721515,  30.26308875,  58.11514791,   5.97828353,
+       -11.03024255,  -2.95225412,  49.22757724,  12.35191354,
+        60.96914324,   7.13226438, -12.56451221,  66.19490992,
+       -17.87080904,  27.71120954,   1.35281436,  35.80188293,
+       -16.9561018 , -15.39986594,   0.58514808,  32.63009318,
+        12.20705734,  -4.23991439,  66.45667292,  67.1467423 ,
+        32.08794442,  71.41162079,  -6.69518428,  -6.21886221,
+         0.12338652, -17.3127624 ,   5.34228616,  -5.28529409,
+        12.78867194,  -0.79418746,   9.26418582,  -5.09157918,
+        46.85243872,   8.764054  ,   3.67975868, -14.2596615 ,
+        10.76950969,  40.52879738,  66.68991439,  23.82932953,
+         3.60368565,  42.69170346,   8.47585468,  64.57462177,
+        -7.65456788,  -6.94218944,  53.62941074,  -9.46495613,
+        33.06521281,  53.70369254,  21.28483189,  35.32587129,
+         8.0646854 ,  69.71120081,  48.09456914,  66.440138  ,
+       -11.75407332,  29.66519856,  20.11456971, -15.5240168 ,
+        -5.4359874 , -14.34577371,  -0.26161014,  -4.41381492,
+       -16.60818486, -17.69304935,  -7.09102285,  -6.55568194,
+       -11.53152147,  59.64454771,  15.40693518,  68.11999211,
+        36.45709991,  -6.1543164 , -16.20525925, -11.24193557,
+        18.08161099,  40.05749666,  35.53561637,  47.87203529,
+        -4.38230475,   7.44872708,   7.24849564,   7.74243436,
+        43.23607339,  -7.2239746 , -12.54961912,  11.10762799,
+        51.24267263,  -3.18134816,  -5.56914843,  66.37558673,
+        34.01434221])
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>golden_data_output <span style="color:#f92672">=</span> golden_data<span style="color:#f92672">.</span>copy()
+</span></span><span style="display:flex;"><span>golden_data_output[<span style="color:#e6db74">&#34;Predictions&#34;</span>] <span style="color:#f92672">=</span> predictions
+</span></span><span style="display:flex;"><span>golden_data_output<span style="color:#f92672">.</span>to_csv(<span style="color:#e6db74">&#34;../../Output Files/Data/prediction.csv&#34;</span>)
+</span></span></code></pre></div><h3 id="analyze-predictions-with-shap-values">Analyze Predictions with SHAP values:</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>shap<span style="color:#f92672">.</span>initjs()
+</span></span><span style="display:flex;"><span>explainer <span style="color:#f92672">=</span> shap<span style="color:#f92672">.</span>TreeExplainer(complex_model)
+</span></span><span style="display:flex;"><span>shap_values <span style="color:#f92672">=</span> explainer<span style="color:#f92672">.</span>shap_values(golden_data, predictions, check_additivity<span style="color:#f92672">=</span><span style="color:#66d9ef">False</span>)
+</span></span></code></pre></div><!-- raw HTML omitted -->
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>shap<span style="color:#f92672">.</span>summary_plot(shap_values, golden_data, max_display<span style="color:#f92672">=</span>len(golden_data<span style="color:#f92672">.</span>index))
+</span></span></code></pre></div><p><img src="output_75_0.png" alt="png"></p>
+<h4 id="observations-1">Observations:</h4>
+<ul>
+<li>Vehicle type 5 doors and SUV to blame for low Net-profit forecasting.</li>
+<li>Numerical variables Age and monthly kilometers and CRM score contributed the most for higher net profit.</li>
+<li>Other features such as Brands, Socioeconomic status has no effect compared to variables on the top.</li>
+<li>From feature importance plot it shows Yearly income, monthly kilometers, Age and CRM score are most important factors in deciding net profit.</li>
+<li>It would be insightful to understand what to blame for high or low net profit from an out-of-sample dataset, as per individual forecasts.</li>
+<li>Higher age and monthly kilometers contributes higher net-profit, tho there are some cases where high value of age &ldquo;red&rdquo; decreases nonprofit, a dependence plot between two features will show how two similar values of monthly kilometers contributes differently to profit as it depends on interaction of two features.</li>
+</ul>
+<h3 id="individual-explanations-of-high-and-low-net-profit-forecasts">Individual Explanations of High and Low net profit forecasts.</h3>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>shap<span style="color:#f92672">.</span>plots<span style="color:#f92672">.</span>_waterfall<span style="color:#f92672">.</span>waterfall_legacy(explainer<span style="color:#f92672">.</span>expected_value,
+</span></span><span style="display:flex;"><span>                                       shap_values[<span style="color:#ae81ff">1</span>],
+</span></span><span style="display:flex;"><span>                                       golden_data<span style="color:#f92672">.</span>iloc[<span style="color:#ae81ff">1</span>],
+</span></span><span style="display:flex;"><span>                                       golden_data<span style="color:#f92672">.</span>columns)
+</span></span><span style="display:flex;"><span>print(predictions[<span style="color:#ae81ff">1</span>])
+</span></span><span style="display:flex;"><span>golden_data<span style="color:#f92672">.</span>iloc[<span style="color:#ae81ff">1</span>]
+</span></span></code></pre></div><p><img src="output_78_0.png" alt="png"></p>
+<pre><code>49.894912616226186
+
+
+
+
+
+Age                                        21.0
+Monthly premium                            14.0
+Monthly kilometers                        694.0
+Yearly income                           34900.0
+Credit score                              833.0
+Brand_Opel                                  1.0
+Brand_Peugeot                               0.0
+Brand_Renault                               0.0
+Brand_Toyota                                0.0
+Brand_Volkswagen                            0.0
+Vehicle type_5 doors                        1.0
+Vehicle type_SUV                            0.0
+Vehicle type_utility                        0.0
+Socioeconomic category_Office worker        1.0
+Socioeconomic category_Self employed        0.0
+Socioeconomic category_Student              0.0
+Socioeconomic category_Unemployed           0.0
+Brand_other                                 0.0
+Name: 1001, dtype: float64
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>shap<span style="color:#f92672">.</span>plots<span style="color:#f92672">.</span>_waterfall<span style="color:#f92672">.</span>waterfall_legacy(explainer<span style="color:#f92672">.</span>expected_value, shap_values[<span style="color:#ae81ff">292</span>], golden_data<span style="color:#f92672">.</span>iloc[<span style="color:#ae81ff">292</span>],
+</span></span><span style="display:flex;"><span>                                       golden_data<span style="color:#f92672">.</span>columns)
+</span></span><span style="display:flex;"><span>print(predictions[<span style="color:#ae81ff">292</span>])
+</span></span><span style="display:flex;"><span>golden_data<span style="color:#f92672">.</span>iloc[<span style="color:#ae81ff">292</span>]
+</span></span></code></pre></div><p><img src="output_79_0.png" alt="png"></p>
+<pre><code>34.0143422063608
+
+
+
+
+
+Age                                        33.0
+Monthly premium                             8.0
+Monthly kilometers                        748.0
+Yearly income                           32360.0
+Credit score                              271.0
+Brand_Opel                                  1.0
+Brand_Peugeot                               0.0
+Brand_Renault                               0.0
+Brand_Toyota                                0.0
+Brand_Volkswagen                            0.0
+Vehicle type_5 doors                        0.0
+Vehicle type_SUV                            0.0
+Vehicle type_utility                        1.0
+Socioeconomic category_Office worker        0.0
+Socioeconomic category_Self employed        0.0
+Socioeconomic category_Student              1.0
+Socioeconomic category_Unemployed           0.0
+Brand_other                                 0.0
+Name: 1298, dtype: float64
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>shap<span style="color:#f92672">.</span>plots<span style="color:#f92672">.</span>_waterfall<span style="color:#f92672">.</span>waterfall_legacy(explainer<span style="color:#f92672">.</span>expected_value, shap_values[<span style="color:#ae81ff">185</span>], golden_data<span style="color:#f92672">.</span>iloc[<span style="color:#ae81ff">185</span>],
+</span></span><span style="display:flex;"><span>                                       golden_data<span style="color:#f92672">.</span>columns)
+</span></span><span style="display:flex;"><span>print(predictions[<span style="color:#ae81ff">185</span>])
+</span></span><span style="display:flex;"><span>golden_data<span style="color:#f92672">.</span>iloc[<span style="color:#ae81ff">185</span>]
+</span></span></code></pre></div><p><img src="output_80_0.png" alt="png"></p>
+<pre><code>36.434799275715484
+
+
+
+
+
+Age                                        42.0
+Monthly premium                            15.0
+Monthly kilometers                        345.0
+Yearly income                           21730.0
+Credit score                               78.0
+Brand_Opel                                  0.0
+Brand_Peugeot                               0.0
+Brand_Renault                               0.0
+Brand_Toyota                                0.0
+Brand_Volkswagen                            0.0
+Vehicle type_5 doors                        0.0
+Vehicle type_SUV                            0.0
+Vehicle type_utility                        0.0
+Socioeconomic category_Office worker        1.0
+Socioeconomic category_Self employed        0.0
+Socioeconomic category_Student              0.0
+Socioeconomic category_Unemployed           0.0
+Brand_other                                 0.0
+Name: 1190, dtype: float64
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>shap<span style="color:#f92672">.</span>plots<span style="color:#f92672">.</span>_waterfall<span style="color:#f92672">.</span>waterfall_legacy(explainer<span style="color:#f92672">.</span>expected_value, shap_values[<span style="color:#ae81ff">3</span>], golden_data<span style="color:#f92672">.</span>iloc[<span style="color:#ae81ff">3</span>],
+</span></span><span style="display:flex;"><span>                                       golden_data<span style="color:#f92672">.</span>columns)
+</span></span><span style="display:flex;"><span>print(predictions[<span style="color:#ae81ff">3</span>])
+</span></span><span style="display:flex;"><span>golden_data<span style="color:#f92672">.</span>iloc[<span style="color:#ae81ff">3</span>]
+</span></span></code></pre></div><p><img src="output_81_0.png" alt="png"></p>
+<pre><code>-24.23093475368557
+
+
+
+
+
+Age                                        33.0
+Monthly premium                             2.0
+Monthly kilometers                        970.0
+Yearly income                           45450.0
+Credit score                              990.0
+Brand_Opel                                  0.0
+Brand_Peugeot                               0.0
+Brand_Renault                               0.0
+Brand_Toyota                                0.0
+Brand_Volkswagen                            0.0
+Vehicle type_5 doors                        1.0
+Vehicle type_SUV                            0.0
+Vehicle type_utility                        0.0
+Socioeconomic category_Office worker        0.0
+Socioeconomic category_Self employed        0.0
+Socioeconomic category_Student              1.0
+Socioeconomic category_Unemployed           0.0
+Brand_other                                 0.0
+Name: 1003, dtype: float64
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>shap<span style="color:#f92672">.</span>plots<span style="color:#f92672">.</span>_waterfall<span style="color:#f92672">.</span>waterfall_legacy(explainer<span style="color:#f92672">.</span>expected_value, shap_values[<span style="color:#ae81ff">19</span>], golden_data<span style="color:#f92672">.</span>iloc[<span style="color:#ae81ff">19</span>],
+</span></span><span style="display:flex;"><span>                                       golden_data<span style="color:#f92672">.</span>columns)
+</span></span><span style="display:flex;"><span>print(predictions[<span style="color:#ae81ff">19</span>])
+</span></span><span style="display:flex;"><span>golden_data<span style="color:#f92672">.</span>iloc[<span style="color:#ae81ff">19</span>]
+</span></span></code></pre></div><p><img src="output_82_0.png" alt="png"></p>
+<pre><code>-17.41840315625436
+
+
+
+
+
+Age                                        45.0
+Monthly premium                             4.0
+Monthly kilometers                        993.0
+Yearly income                           29160.0
+Credit score                              255.0
+Brand_Opel                                  0.0
+Brand_Peugeot                               0.0
+Brand_Renault                               1.0
+Brand_Toyota                                0.0
+Brand_Volkswagen                            0.0
+Vehicle type_5 doors                        0.0
+Vehicle type_SUV                            0.0
+Vehicle type_utility                        0.0
+Socioeconomic category_Office worker        0.0
+Socioeconomic category_Self employed        0.0
+Socioeconomic category_Student              0.0
+Socioeconomic category_Unemployed           0.0
+Brand_other                                 0.0
+Name: 1021, dtype: float64
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>shap<span style="color:#f92672">.</span>plots<span style="color:#f92672">.</span>_waterfall<span style="color:#f92672">.</span>waterfall_legacy(explainer<span style="color:#f92672">.</span>expected_value, shap_values[<span style="color:#ae81ff">140</span>], golden_data<span style="color:#f92672">.</span>iloc[<span style="color:#ae81ff">140</span>],
+</span></span><span style="display:flex;"><span>                                       golden_data<span style="color:#f92672">.</span>columns)
+</span></span><span style="display:flex;"><span>print(predictions[<span style="color:#ae81ff">140</span>])
+</span></span><span style="display:flex;"><span>golden_data<span style="color:#f92672">.</span>iloc[<span style="color:#ae81ff">140</span>]
+</span></span></code></pre></div><p><img src="output_83_0.png" alt="png"></p>
+<pre><code>-17.65590834806663
+
+
+
+
+
+Age                                        30.0
+Monthly premium                            27.0
+Monthly kilometers                        915.0
+Yearly income                           19460.0
+Credit score                              746.0
+Brand_Opel                                  0.0
+Brand_Peugeot                               1.0
+Brand_Renault                               0.0
+Brand_Toyota                                0.0
+Brand_Volkswagen                            0.0
+Vehicle type_5 doors                        0.0
+Vehicle type_SUV                            0.0
+Vehicle type_utility                        0.0
+Socioeconomic category_Office worker        0.0
+Socioeconomic category_Self employed        0.0
+Socioeconomic category_Student              0.0
+Socioeconomic category_Unemployed           0.0
+Brand_other                                 0.0
+Name: 1145, dtype: float64
+</code></pre>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;"><code class="language-python" data-lang="python"><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>shap<span style="color:#f92672">.</span>plots<span style="color:#f92672">.</span>_waterfall<span style="color:#f92672">.</span>waterfall_legacy(explainer<span style="color:#f92672">.</span>expected_value, shap_values[<span style="color:#ae81ff">264</span>], golden_data<span style="color:#f92672">.</span>iloc[<span style="color:#ae81ff">264</span>],
+</span></span><span style="display:flex;"><span>                                       golden_data<span style="color:#f92672">.</span>columns)
+</span></span><span style="display:flex;"><span>print(predictions[<span style="color:#ae81ff">264</span>])
+</span></span><span style="display:flex;"><span>golden_data<span style="color:#f92672">.</span>iloc[<span style="color:#ae81ff">264</span>]
+</span></span></code></pre></div><p><img src="output_84_0.png" alt="png"></p>
+<pre><code>-16.60818486301198
+
+
+
+
+
+Age                                        41.0
+Monthly premium                             5.0
+Monthly kilometers                        801.0
+Yearly income                           32950.0
+Credit score                              824.0
+Brand_Opel                                  0.0
+Brand_Peugeot                               0.0
+Brand_Renault                               1.0
+Brand_Toyota                                0.0
+Brand_Volkswagen                            0.0
+Vehicle type_5 doors                        0.0
+Vehicle type_SUV                            0.0
+Vehicle type_utility                        0.0
+Socioeconomic category_Office worker        0.0
+Socioeconomic category_Self employed        0.0
+Socioeconomic category_Student              0.0
+Socioeconomic category_Unemployed           0.0
+Brand_other                                 0.0
+Name: 1270, dtype: float64
+</code></pre>
+</div>
+    </article>
+  </main>
+
+    </div>
+    <footer>
+  <hr />
+  
+    <p id="social">
+      Find me around the web:
+      <br />
+      
+        
+        <a href="https://github.com/AHMED-ALTAKROURI">GitHub</a>
+      
+         | 
+        <a href="https://twitter.com/ahmedtakrouri">Twitter</a>
+      
+         | 
+        <a href="https://www.linkedin.com/in/ahmed-altakrouri-7422b185/">Linkedin</a>
+      
+    </p>
+  
+  <p class="copyright">
+    Copyright © 2023
+    <a href="https://ahmed-altakrouri.github.io/"><strong>Ahmed Altakrouri</strong></a>.
+
+
+  </p>
+  <p class="builtWith">
+
+
+
+
+
+
+
+</footer>
+
+  </body>
+</html>
