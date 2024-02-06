@@ -9,13 +9,29 @@ layout: default
 
 {{< justify >}}
 <span style="font-size: 18px;">
-As a seasoned data scientist with over 6 years of professional experience, I have a proven track record of leveraging
-the power of machine learning and AI to drive business success. My expertise ranges from natural language processing to
-complex forecasting models, and I am constantly seeking out new and innovative ways to solve difficult problems.
-My main areas of interest include Probabilistic Machine Learning, Causal Inference, Natural Language Understanding,
-and Bayesian Inference, and I have achieved substantial results in these areas, as evidenced by my various successful
-projects and publications. I am deeply committed to using my skills and experience to continue driving positive change
-in the business world through the use of cutting-edge technology.
+Data science lead with above 10 years' experience in data science, machine learning, deep learning, R, python programming, SQL, and Full Stack Java development.
+
+Working as Senior Data Scientist in Emirates Steel. Experience of working in multiple domains.
+
+I was a part of the TCS Artificial Intelligence and Robotics Team. Worked with numerous clients in different sectors. Have worked in end to end model pipelines and  different stages of a data science project like data mining, data cleansing, data exploration, data modeling, validation of results, and presenting the results to the client.
+Have experience working in numerous algorithms, supervised and unsupervised learning techniques, parameter optimization in models, deploying the results on a server, and exposing it through web services.
+
+I believe my strong points are an exceptional learning curve, adaptive, fast learner, and analytical skills.
+
+Below flows the snapshot of  my profile:
+Domains Worked On: Banking, E-commerce, Retail, Social Media, Forex Trading, Oil & Gas, Manufacturing
+
+Data Science Skills:	Machine Learning algorithms, Probability and Statistics,  Deep learning with Tensorflow and Keras, Sentimental Analysis, NLP, Text Analysis, supervised and unsupervised learning techniques, CNN, RNN, Data modeling and evaluation, Hyper-parameter optimization, system design. Kubernetes and Docker. Hands-on experience in Google Cloud AI Platform.
+
+Tools Used: Rstudio, Anaconda, Visual Studio, pgAdmin, Eclipse
+
+Frameworks Used: Django, Flask, ORM, Spring MVC, Spring Boot, Jemmy
+
+Testing Skills: Junit, Corbetura, SonarQube, Hudson, HP ALM
+
+UI Technologies: Java Swing, Java FX, Javascript, HTML, CSS, D3js Library, Angular7, NodeJS
+
+Excited to be a part of the UAE's AI vision 2030.
 </span>
 {{< /justify >}}
 
@@ -23,23 +39,6 @@ in the business world through the use of cutting-edge technology.
 Below a list of projects I have implemented from scratch during my career as Data Scientist:
 
 - Churn prediction for purchasers.
-- Purchase prediction.
-- Credit risk and optimization.
-- Customer segmentation for B2B.
-- Churn prediction for customers of the economic zone.
-- Predictive maintenance and survival modeling for machines used in mining groups.
-- Uplift modeling for persuasion.
-- Incoming call prediction for a call center.
-- Call center speech logs topic identification.
-- Churn prediction for mobile subscription.
-- Identifying high potential sales areas.
-- Social media crawling of users’ complaints.
-- Crawling competitor's websites to extract their coverage areas
-- Large scale article classification model for Mowjaz.com
-- Large LDA modeling for Mawdoo3.com articles ~140K.
-- Emotion detection in Arabic text.
-- Sentiment detection in Arabic text.
-- Intent classification.
 
 You can download my CV [here](/files/Ahmed_Altakrouri_Best_CV.pdf).
 
