@@ -4,9 +4,6 @@ layout: default
 ---
 
 
-![My Image Description](/first_notebook_content/img.png)
-
-
 {{< justify >}}
 <span style="font-size: 18px;">
 Data science lead with above 10 years' experience in data science, machine learning, deep learning, R, python programming, SQL, and Full Stack Java development.
